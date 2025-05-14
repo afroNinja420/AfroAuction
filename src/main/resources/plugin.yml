@@ -2,7 +2,7 @@ name: AfroAuction
 version: 1.0-SNAPSHOT
 main: me.afroninja.afroauction.AfroAuction
 api-version: 1.20
-depend: [Vault, HolographicDisplays]
+depend: [Vault]
 commands:
   createauction:
     description: Create a new auction

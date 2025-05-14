@@ -1,13 +1,17 @@
 package me.afroninja.afroauction;
 
-import com.gmail.filoghost.holographicdisplays.api.Hologram;
-import com.gmail.filoghost.holographicdisplays.api.HologramsAPI;
 import org.bukkit.Location;
-import org.bukkit.Material;
+import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.util.Vector;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 public class Auction {
@@ -18,7 +22,7 @@ public class Auction {
     private double currentBid;
     private UUID highestBidder;
     private final long endTime;
-    private Hologram hologram;
+    private final List<Entity> hologramEntities;
     private final BukkitRunnable updateTask;
 
     public Auction(AfroAuction plugin, UUID creator, ItemStack item, Location chestLocation, double startingBid, long duration) {
@@ -29,6 +33,7 @@ public class Auction {
         this.currentBid = startingBid;
         this.highestBidder = null;
         this.endTime = System.currentTimeMillis() + (duration * 1000);
+        this.hologramEntities = new ArrayList<>();
 
         createHologram();
         updateHologram();
@@ -51,20 +56,30 @@ public class Auction {
         double lineSpacing = plugin.getConfig().getDouble("hologram-line-spacing", 0.25);
         double itemOffset = plugin.getConfig().getDouble("hologram-item-offset", 0.25);
 
-        hologram = HologramsAPI.createHologram(plugin, chestLocation.clone().add(0.5, baseHeight, 0.5));
-        hologram.appendTextLine("");
-        hologram.appendTextLine("");
-        hologram.appendTextLine("");
-        hologram.appendItemLine(item.clone());
+        Location baseLoc = chestLocation.clone().add(0.5, baseHeight, 0.5);
 
+        // Create three ArmorStands for text lines
         for (int i = 0; i < 3; i++) {
-            hologram.getLine(i).setLocation(hologram.getLocation().clone().add(0, i * lineSpacing, 0));
+            Location lineLoc = baseLoc.clone().add(0, i * lineSpacing, 0);
+            ArmorStand stand = (ArmorStand) chestLocation.getWorld().spawnEntity(lineLoc, EntityType.ARMOR_STAND);
+            stand.setVisible(false);
+            stand.setGravity(false);
+            stand.setCustomNameVisible(true);
+            stand.setMarker(true);
+            hologramEntities.add(stand);
         }
-        hologram.getLine(3).setLocation(hologram.getLocation().clone().add(0, 3 * lineSpacing + itemOffset, 0));
+
+        // Create Item entity for floating item
+        Location itemLoc = baseLoc.clone().add(0, 3 * lineSpacing + itemOffset, 0);
+        Item itemEntity = chestLocation.getWorld().dropItem(itemLoc, item.clone());
+        itemEntity.setPickupDelay(Integer.MAX_VALUE);
+        itemEntity.setVelocity(new Vector(0, 0, 0));
+        itemEntity.setCanMobPickup(false);
+        hologramEntities.add(itemEntity);
     }
 
     private void updateHologram() {
-        if (hologram == null || hologram.isDeleted()) return;
+        if (hologramEntities.isEmpty()) return;
 
         String itemName = item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : item.getType().name();
         String bidLine = highestBidder == null
@@ -73,12 +88,11 @@ public class Auction {
         String timeLine = plugin.getMessage("hologram-time", "%time%", formatTimeRemaining());
         String itemLine = plugin.getMessage("hologram-item", "%item%", itemName);
 
-        hologram.getLine(0).removeLine();
-        hologram.insertTextLine(0, bidLine);
-        hologram.getLine(1).removeLine();
-        hologram.insertTextLine(1, timeLine);
-        hologram.getLine(2).removeLine();
-        hologram.insertTextLine(2, itemLine);
+        // Update ArmorStand custom names
+        ((ArmorStand) hologramEntities.get(0)).setCustomName(bidLine);
+        ((ArmorStand) hologramEntities.get(1)).setCustomName(timeLine);
+        ((ArmorStand) hologramEntities.get(2)).setCustomName(itemLine);
+        // Item entity (index 3) doesn't need updating
     }
 
     private String formatTimeRemaining() {
@@ -140,9 +154,10 @@ public class Auction {
 
     public void endAuction() {
         updateTask.cancel();
-        if (hologram != null) {
-            hologram.delete();
+        for (Entity entity : hologramEntities) {
+            entity.remove();
         }
+        hologramEntities.clear();
 
         String itemName = item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : item.getType().name();
         if (highestBidder == null) {
