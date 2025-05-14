@@ -42,7 +42,7 @@ public class PendingItemsManager {
         savePendingItems();
     }
 
-    private void savePendingItems() {
+    public void savePendingItems() {
         pendingConfig.set("pending", null);
         int index = 0;
         for (PendingItem pending : pendingItems) {

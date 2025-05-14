@@ -128,6 +128,10 @@ public class Auction {
         return endTime;
     }
 
+    public long getTimeLeftSeconds() {
+        return Math.max(0, (endTime - System.currentTimeMillis()) / 1000);
+    }
+
     public UUID getHighestBidder() {
         return highestBidder;
     }
