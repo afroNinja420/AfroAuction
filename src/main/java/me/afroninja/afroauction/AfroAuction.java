@@ -8,6 +8,8 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import java.util.logging.Level;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class AfroAuction extends JavaPlugin {
     private Economy economy;
@@ -91,9 +93,30 @@ public class AfroAuction extends JavaPlugin {
             getLogger().warning("Missing message key: messages." + key);
             message = "&cMissing message: " + key;
         }
+
+        // Pattern to match color codes (§ followed by 0-9, a-f, k-o, r)
+        Pattern colorPattern = Pattern.compile("§[0-9a-fk-or]");
+        String lastColor = "&a"; // Default to green if no color found
+
+        // Replace placeholders
         for (int i = 0; i < placeholders.length; i += 2) {
-            message = message.replace(placeholders[i], placeholders[i + 1]);
+            String placeholder = placeholders[i];
+            String value = placeholders[i + 1];
+            if (placeholder.equals("%item%")) {
+                // Find the last color code before %item%
+                Matcher matcher = colorPattern.matcher(message);
+                while (matcher.find()) {
+                    if (message.indexOf(placeholder, matcher.start()) >= matcher.start()) {
+                        lastColor = matcher.group();
+                    }
+                }
+                // Replace %item% and append reset + last color
+                message = message.replace(placeholder, value + "§r" + lastColor.replace("§", "&"));
+            } else {
+                message = message.replace(placeholder, value);
+            }
         }
+
         return message.replace("&", "§");
     }
 
