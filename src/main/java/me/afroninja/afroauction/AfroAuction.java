@@ -96,13 +96,10 @@ public class AfroAuction extends JavaPlugin {
             String placeholder = placeholders[i];
             String value = placeholders[i + 1];
             if (placeholder.equals("%item%")) {
-                // Format item name: title case with spaces if no custom name
+                // Format item name: title case with spaces if no custom name or color
                 String itemName = value;
-                if (!itemName.contains("{")) { // No custom name (JSON)
+                if (!itemName.contains("§") && !itemName.contains("{")) { // No color code or JSON
                     itemName = formatItemName(itemName);
-                }
-                // Apply default color if no custom color
-                if (!itemName.contains("§")) {
                     String defaultItemColor = config.getString("default-item-color", "&b").replace("&", "§"); // Default aqua
                     itemName = defaultItemColor + itemName;
                 }
