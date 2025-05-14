@@ -58,7 +58,7 @@ public class AuctionGUI implements Listener {
         ItemMeta bidMeta = bidItem.getItemMeta();
         bidMeta.setDisplayName(ChatColor.GREEN + "Place Bid");
         bidMeta.setLore(Arrays.asList(
-                ChatColor.GRAY + "Click to bid!",
+                ChatColor.GRAY + "Click to enter bid amount in chat!",
                 ChatColor.GRAY + "Min Bid: $" + String.format("%.2f", auction.getCurrentPrice() + plugin.getConfig().getDouble("min-bid-increment"))
         ));
         bidItem.setItemMeta(bidMeta);
@@ -73,21 +73,23 @@ public class AuctionGUI implements Listener {
         if (event.getCurrentItem() != null && event.getCurrentItem().getType() == Material.EMERALD) {
             double minBid = auction.getCurrentPrice() + plugin.getConfig().getDouble("min-bid-increment");
             player.closeInventory();
-            player.sendMessage(ChatColor.YELLOW + "Enter your bid (min $" + String.format("%.2f", minBid) + ") in chat:");
-            if (auction.placeBid(player, minBid)) {
-                updateInventory();
-                open(); // Reopen GUI
-            } else {
-                player.sendMessage(ChatColor.RED + "Bid failed! Ensure you have enough money and bid at least $" + String.format("%.2f", minBid));
-            }
+            player.sendMessage(ChatColor.YELLOW + "Enter your bid (min $" + String.format("%.2f", minBid) + ") in chat. Type 'cancel' to abort.");
+            // Register chat listener for this player's bid
+            new ChatBidListener(plugin, auction, player, minBid, this);
         }
     }
 
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
         if (event.getInventory() == inventory) {
+            // Unregister listener to avoid memory leaks
             InventoryClickEvent.getHandlerList().unregister(this);
             InventoryCloseEvent.getHandlerList().unregister(this);
         }
+    }
+
+    public void reopen() {
+        updateInventory();
+        open();
     }
 }
