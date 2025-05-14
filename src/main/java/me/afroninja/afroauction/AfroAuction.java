@@ -7,7 +7,6 @@ import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
-import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -113,7 +112,7 @@ public class AfroAuction extends JavaPlugin {
                 // Format item name: title case with spaces if no custom name
                 String itemName = value;
                 if (!itemName.contains("{")) { // No custom name (JSON)
-                    itemName = itemName.replace("_", " ").replace("DIAMOND", "Diamond").replace("SWORD", "Sword");
+                    itemName = formatItemName(itemName);
                 }
                 // Apply default color if no custom color, otherwise use existing color
                 if (!itemName.contains("§")) {
@@ -129,6 +128,19 @@ public class AfroAuction extends JavaPlugin {
         }
 
         return message.replace("&", "§");
+    }
+
+    public String formatItemName(String itemName) {
+        // Replace underscores with spaces and convert to title case
+        String[] words = itemName.replace("_", " ").toLowerCase().split(" ");
+        StringBuilder formatted = new StringBuilder();
+        for (String word : words) {
+            if (word.isEmpty()) continue;
+            formatted.append(Character.toUpperCase(word.charAt(0)))
+                    .append(word.substring(1))
+                    .append(" ");
+        }
+        return formatted.toString().trim();
     }
 
     public Economy getEconomy() {

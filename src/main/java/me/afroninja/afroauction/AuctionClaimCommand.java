@@ -44,10 +44,7 @@ public class AuctionClaimCommand implements CommandExecutor {
                 player.getInventory().setItem(firstEmpty, item);
                 pendingItemsManager.removePendingItem(playerUUID, item);
                 claimedCount++;
-                String itemName = item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : item.getType().name();
-                if (!itemName.contains("{")) {
-                    itemName = itemName.replace("_", " ").replace("DIAMOND", "Diamond").replace("SWORD", "Sword");
-                }
+                String itemName = item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : plugin.formatItemName(item.getType().name());
                 player.sendMessage(plugin.getMessage("claim-success", "%item%", itemName));
             }
         }
