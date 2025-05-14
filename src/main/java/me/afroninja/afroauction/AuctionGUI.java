@@ -1,6 +1,7 @@
 package me.afroninja.afroauction;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -23,7 +24,7 @@ public class AuctionGUI implements Listener {
         this.auctionManager = auctionManager;
         this.auction = auction;
         this.player = player;
-        this.inventory = Bukkit.createInventory(null, 9, plugin.getMessage("gui-title", "%item%", getItemName()));
+        this.inventory = Bukkit.createInventory(null, 27, plugin.getMessage("gui-title", "%item%", getItemName()));
 
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
         updateInventory();
@@ -36,21 +37,28 @@ public class AuctionGUI implements Listener {
     private void updateInventory() {
         inventory.clear();
 
+        // Auction item in slot 13 (center of second row)
         ItemStack itemDisplay = auction.getItem().clone();
-        ItemMeta itemMeta = itemDisplay.getItemMeta();
-        itemMeta.setLore(Arrays.asList(
+        inventory.setItem(13, itemDisplay);
+
+        // Info item in slot 11 (left of auction item)
+        ItemStack infoItem = new ItemStack(Material.PAPER);
+        ItemMeta infoMeta = infoItem.getItemMeta();
+        infoMeta.setDisplayName(plugin.getMessage("gui-info-title"));
+        infoMeta.setLore(Arrays.asList(
                 plugin.getMessage("gui-bid-label", "%bid%", String.format("%.2f", auction.getCurrentBid())),
                 plugin.getMessage("gui-time-label", "%time%", formatTimeRemaining())
         ));
-        itemDisplay.setItemMeta(itemMeta);
-        inventory.setItem(4, itemDisplay);
+        infoItem.setItemMeta(infoMeta);
+        inventory.setItem(11, infoItem);
 
-        ItemStack bidButton = new ItemStack(org.bukkit.Material.EMERALD);
+        // Bid button in slot 15 (right of auction item)
+        ItemStack bidButton = new ItemStack(Material.EMERALD);
         ItemMeta bidMeta = bidButton.getItemMeta();
         double nextBid = auction.getCurrentBid() + plugin.getConfig().getDouble("min-bid-increment", 1.0);
         bidMeta.setDisplayName(plugin.getMessage("gui-bid-button", "%amount%", String.format("%.2f", nextBid)));
         bidButton.setItemMeta(bidMeta);
-        inventory.setItem(8, bidButton);
+        inventory.setItem(15, bidButton);
     }
 
     private String formatTimeRemaining() {
@@ -83,7 +91,7 @@ public class AuctionGUI implements Listener {
         }
 
         event.setCancelled(true);
-        if (event.getRawSlot() != 8) {
+        if (event.getRawSlot() != 15) {
             return;
         }
 

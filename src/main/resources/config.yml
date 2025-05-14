@@ -67,6 +67,7 @@ messages:
   claim-no-items: "&cYou have no items to claim!"
   claim-success: "&aYou claimed %item%!"
   gui-title: "&aAuction: %item%"
+  gui-info-title: "&eAuction Info"
   gui-bid-label: "&aCurrent Bid: $%bid%"
   gui-time-label: "&aTime Left: %time%"
   gui-bid-button: "&aBid $%amount%"

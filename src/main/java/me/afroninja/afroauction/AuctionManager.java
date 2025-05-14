@@ -1,8 +1,8 @@
 package me.afroninja.afroauction;
 
 import org.bukkit.Location;
-import org.bukkit.inventory.ItemStack;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.inventory.ItemStack;
 
 import java.io.File;
 import java.io.IOException;

@@ -58,7 +58,7 @@ public class Auction {
 
         Location baseLoc = chestLocation.clone().add(0.5, baseHeight, 0.5);
 
-        // Create three ArmorStands for text lines
+        // Create three ArmorStands for text lines (highest bid, time, item name)
         for (int i = 0; i < 3; i++) {
             Location lineLoc = baseLoc.clone().add(0, i * lineSpacing, 0);
             ArmorStand stand = (ArmorStand) chestLocation.getWorld().spawnEntity(lineLoc, EntityType.ARMOR_STAND);
@@ -88,7 +88,7 @@ public class Auction {
         String timeLine = plugin.getMessage("hologram-time", "%time%", formatTimeRemaining());
         String itemLine = plugin.getMessage("hologram-item", "%item%", itemName);
 
-        // Update ArmorStand custom names
+        // Update ArmorStand custom names in order: highest bid, time, item name
         ((ArmorStand) hologramEntities.get(0)).setCustomName(bidLine);
         ((ArmorStand) hologramEntities.get(1)).setCustomName(timeLine);
         ((ArmorStand) hologramEntities.get(2)).setCustomName(itemLine);
