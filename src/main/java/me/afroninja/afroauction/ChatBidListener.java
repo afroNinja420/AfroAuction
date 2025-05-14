@@ -12,14 +12,12 @@ public class ChatBidListener implements Listener {
     private final Auction auction;
     private final Player player;
     private final double minBid;
-    private final AuctionGUI gui;
 
-    public ChatBidListener(AfroAuction plugin, Auction auction, Player player, double minBid, AuctionGUI gui) {
+    public ChatBidListener(AfroAuction plugin, Auction auction, Player player, double minBid) {
         this.plugin = plugin;
         this.auction = auction;
         this.player = player;
         this.minBid = minBid;
-        this.gui = gui;
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
@@ -29,14 +27,11 @@ public class ChatBidListener implements Listener {
         event.setCancelled(true); // Prevent chat message from broadcasting
 
         String message = event.getMessage().trim();
-        // Unregister this listener to stop listening after processing
-        HandlerList.unregisterAll(this);
+        HandlerList.unregisterAll(this); // Unregister after processing
 
-        // Run bid processing synchronously
         plugin.getServer().getScheduler().runTask(plugin, () -> {
             if (message.equalsIgnoreCase("cancel")) {
                 player.sendMessage(ChatColor.YELLOW + "Bid cancelled.");
-                gui.reopen();
                 return;
             }
 
@@ -44,18 +39,15 @@ public class ChatBidListener implements Listener {
                 double bidAmount = Double.parseDouble(message);
                 if (bidAmount < minBid) {
                     player.sendMessage(ChatColor.RED + "Bid must be at least $" + String.format("%.2f", minBid) + "!");
-                    gui.reopen();
                     return;
                 }
                 if (auction.placeBid(player, bidAmount)) {
-                    gui.reopen();
+                    player.sendMessage(ChatColor.GREEN + "Bid placed successfully!");
                 } else {
                     player.sendMessage(ChatColor.RED + "Bid failed! Ensure you have enough money ($" + String.format("%.2f", bidAmount) + ").");
-                    gui.reopen();
                 }
             } catch (NumberFormatException e) {
                 player.sendMessage(ChatColor.RED + "Invalid bid amount! Enter a number or 'cancel'.");
-                gui.reopen();
             }
         });
     }

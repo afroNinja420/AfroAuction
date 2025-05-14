@@ -36,11 +36,9 @@ public class AuctionGUI implements Listener {
 
     private void updateInventory() {
         inventory.clear();
-        // Auction item (center, slot 13)
         ItemStack auctionItem = auction.getItem();
         inventory.setItem(13, auctionItem);
 
-        // Info items
         ItemStack infoItem = new ItemStack(Material.PAPER);
         ItemMeta infoMeta = infoItem.getItemMeta();
         infoMeta.setDisplayName(ChatColor.YELLOW + "Auction Info");
@@ -53,7 +51,6 @@ public class AuctionGUI implements Listener {
         infoItem.setItemMeta(infoMeta);
         inventory.setItem(11, infoItem);
 
-        // Bid button
         ItemStack bidItem = new ItemStack(Material.EMERALD);
         ItemMeta bidMeta = bidItem.getItemMeta();
         bidMeta.setDisplayName(ChatColor.GREEN + "Place Bid");
@@ -68,28 +65,21 @@ public class AuctionGUI implements Listener {
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
         if (event.getInventory() != inventory) return;
-        event.setCancelled(true); // Prevent taking items
+        event.setCancelled(true); // Prevent all item interactions
 
-        if (event.getCurrentItem() != null && event.getCurrentItem().getType() == Material.EMERALD) {
+        if (event.getCurrentItem() != null && event.getCurrentItem().getType() == Material.EMERALD && event.getSlot() == 15) {
             double minBid = auction.getCurrentPrice() + plugin.getConfig().getDouble("min-bid-increment");
             player.closeInventory();
             player.sendMessage(ChatColor.YELLOW + "Enter your bid (min $" + String.format("%.2f", minBid) + ") in chat. Type 'cancel' to abort.");
-            // Register chat listener for this player's bid
-            new ChatBidListener(plugin, auction, player, minBid, this);
+            new ChatBidListener(plugin, auction, player, minBid);
         }
     }
 
     @EventHandler
     public void onInventoryClose(InventoryCloseEvent event) {
         if (event.getInventory() == inventory) {
-            // Unregister listener to avoid memory leaks
             InventoryClickEvent.getHandlerList().unregister(this);
             InventoryCloseEvent.getHandlerList().unregister(this);
         }
-    }
-
-    public void reopen() {
-        updateInventory();
-        open();
     }
 }
