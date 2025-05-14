@@ -8,48 +8,44 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 public class PendingItemsManager {
     private final AfroAuction plugin;
     private final File pendingFile;
     private final YamlConfiguration pendingConfig;
-    private final List<PendingItem> pendingItems;
+    private final Map<UUID, List<ItemStack>> pendingItems = new HashMap<>();
 
     public PendingItemsManager(AfroAuction plugin) {
         this.plugin = plugin;
         this.pendingFile = new File(plugin.getDataFolder(), "pending.yml");
         this.pendingConfig = YamlConfiguration.loadConfiguration(pendingFile);
-        this.pendingItems = new ArrayList<>();
-        loadPendingItems();
     }
 
-    public void addPendingItem(UUID playerUuid, ItemStack item) {
-        pendingItems.add(new PendingItem(playerUuid, item));
+    public void addPendingItem(UUID player, ItemStack item) {
+        pendingItems.computeIfAbsent(player, k -> new ArrayList<>()).add(item);
         savePendingItems();
     }
 
-    public List<ItemStack> getPendingItems(UUID playerUuid) {
-        List<ItemStack> items = new ArrayList<>();
-        pendingItems.stream()
-                .filter(p -> p.playerUuid.equals(playerUuid))
-                .forEach(p -> items.add(p.item));
-        return items;
+    public List<ItemStack> getPendingItems(UUID player) {
+        return new ArrayList<>(pendingItems.getOrDefault(player, new ArrayList<>()));
     }
 
-    public void clearPendingItems(UUID playerUuid) {
-        pendingItems.removeIf(p -> p.playerUuid.equals(playerUuid));
+    public void clearPendingItems(UUID player) {
+        pendingItems.remove(player);
         savePendingItems();
     }
 
     public void savePendingItems() {
-        pendingConfig.set("pending", null);
-        int index = 0;
-        for (PendingItem pending : pendingItems) {
-            String path = "pending." + index;
-            pendingConfig.set(path + ".player", pending.playerUuid.toString());
-            pendingConfig.set(path + ".item", pending.item);
-            index++;
+        pendingConfig.set("pending", null); // Clear existing data
+        for (Map.Entry<UUID, List<ItemStack>> entry : pendingItems.entrySet()) {
+            String path = "pending." + entry.getKey().toString();
+            List<ItemStack> items = entry.getValue();
+            for (int i = 0; i < items.size(); i++) {
+                pendingConfig.set(path + "." + i, items.get(i));
+            }
         }
         try {
             pendingConfig.save(pendingFile);
@@ -58,28 +54,31 @@ public class PendingItemsManager {
         }
     }
 
-    private void loadPendingItems() {
+    public void loadPendingItems() {
         pendingItems.clear();
         ConfigurationSection pendingSection = pendingConfig.getConfigurationSection("pending");
-        if (pendingSection == null) return;
-
-        for (String key : pendingSection.getKeys(false)) {
-            String path = "pending." + key;
-            UUID playerUuid = UUID.fromString(pendingConfig.getString(path + ".player"));
-            ItemStack item = pendingConfig.getItemStack(path + ".item");
-            if (item != null) {
-                pendingItems.add(new PendingItem(playerUuid, item));
-            }
+        if (pendingSection == null) {
+            return;
         }
-    }
-
-    private static class PendingItem {
-        final UUID playerUuid;
-        final ItemStack item;
-
-        PendingItem(UUID playerUuid, ItemStack item) {
-            this.playerUuid = playerUuid;
-            this.item = item.clone();
+        for (String uuidStr : pendingSection.getKeys(false)) {
+            try {
+                UUID uuid = UUID.fromString(uuidStr);
+                List<ItemStack> items = new ArrayList<>();
+                ConfigurationSection playerSection = pendingSection.getConfigurationSection(uuidStr);
+                if (playerSection != null) {
+                    for (String key : playerSection.getKeys(false)) {
+                        ItemStack item = playerSection.getItemStack(key);
+                        if (item != null) {
+                            items.add(item);
+                        }
+                    }
+                }
+                if (!items.isEmpty()) {
+                    pendingItems.put(uuid, items);
+                }
+            } catch (IllegalArgumentException e) {
+                plugin.getLogger().warning("Invalid UUID in pending.yml: " + uuidStr);
+            }
         }
     }
 }

@@ -101,7 +101,7 @@ public class AuctionCommand implements CommandExecutor {
 
         // Check max active auctions
         int maxAuctions = plugin.getConfig().getInt("max-active-auctions");
-        long activeAuctions = auctionManager.getAuctions().values().stream()
+        long activeAuctions = auctionManager.getActiveAuctions().values().stream()
                 .filter(a -> a.getCreator().equals(player.getUniqueId()))
                 .count();
         if (activeAuctions >= maxAuctions) {

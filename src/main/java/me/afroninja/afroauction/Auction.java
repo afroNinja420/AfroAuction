@@ -58,8 +58,8 @@ public class Auction {
 
     public boolean placeBid(Player player, double bidAmount) {
         double minBid = currentPrice + plugin.getConfig().getDouble("min-bid-increment");
+        String itemName = item.hasItemMeta() && item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : item.getType().name();
         if (bidAmount < minBid) {
-            String itemName = item.hasItemMeta() && item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : item.getType().name();
             player.sendMessage(getMessage("bid-too-low", Map.of("min_bid", String.format("%.2f", minBid))));
             return false;
         }
@@ -68,11 +68,10 @@ public class Auction {
             return false;
         }
         if (!plugin.getConfig().getBoolean("allow-self-bidding") && player.getUniqueId().equals(creator)) {
-            player.sendMessage(getMessage("self-bid-disallowed"));
+            player.sendMessage(getMessage("self-bid-disallowed", Map.of()));
             return false;
         }
 
-        String itemName = item.hasItemMeta() && item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : item.getType().name();
         if (highestBidder != null) {
             Player previousBidder = Bukkit.getPlayer(highestBidder);
             if (previousBidder != null) {
