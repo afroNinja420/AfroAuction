@@ -1,0 +1,16 @@
+name: AfroAuction
+version: ${project.version}
+main: me.afroninja.afroauction.AfroAuction
+api-version: 1.20
+author: AfroNinja
+description: A plugin to turn chests into auction shops with bidding and timers.
+depend: [Vault]
+commands:
+  createauction:
+    description: Turns a chest into an auction for the item in your hand.
+    usage: /<command> <startPrice> <durationSeconds>
+    permission: afroauction.create
+permissions:
+  afroauction.create:
+    description: Allows creating an auction chest.
+    default: op

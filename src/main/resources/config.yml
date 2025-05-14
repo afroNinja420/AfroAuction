@@ -1,0 +1,5 @@
+min-bid-increment: 10.0
+gui-title: "&6Auction Chest"
+auction-end-message: "&aAuction ended! %winner% won %item% for $%price%!"
+bid-sound: "ENTITY_EXPERIENCE_ORB_PICKUP"
+broadcast-auction-end: true
