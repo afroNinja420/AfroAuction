@@ -96,7 +96,7 @@ public class AfroAuction extends JavaPlugin {
 
         // Pattern to match color codes (§ followed by 0-9, a-f, k-o, r)
         Pattern colorPattern = Pattern.compile("§[0-9a-fk-or]");
-        String lastColor = "&a"; // Default to green if no color found
+        String lastColor = "&f"; // Default to white if no color found
 
         // Replace placeholders
         for (int i = 0; i < placeholders.length; i += 2) {
@@ -110,8 +110,19 @@ public class AfroAuction extends JavaPlugin {
                         lastColor = matcher.group();
                     }
                 }
-                // Replace %item% and append reset + last color
-                message = message.replace(placeholder, value + "§r" + lastColor.replace("§", "&"));
+                // Format item name: title case with spaces if no custom name
+                String itemName = value;
+                if (!itemName.contains("{")) { // No custom name (JSON)
+                    itemName = itemName.replace("_", " ").replace("DIAMOND", "Diamond").replace("SWORD", "Sword");
+                }
+                // Apply default color if no custom color, otherwise use existing color
+                if (!itemName.contains("§")) {
+                    String defaultItemColor = config.getString("default-item-color", "&b").replace("&", "§"); // Default aqua
+                    itemName = defaultItemColor + itemName + "§r" + lastColor.replace("§", "&");
+                } else {
+                    itemName = itemName + "§r" + lastColor.replace("§", "&");
+                }
+                message = message.replace(placeholder, itemName);
             } else {
                 message = message.replace(placeholder, value);
             }

@@ -6,6 +6,8 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.UUID;
+
 public class AuctionClaimCommand implements CommandExecutor {
     private final AfroAuction plugin;
     private final PendingItemsManager pendingItemsManager;
@@ -23,20 +25,37 @@ public class AuctionClaimCommand implements CommandExecutor {
         }
 
         Player player = (Player) sender;
-        ItemStack item = pendingItemsManager.getPendingItem(player.getUniqueId());
-        if (item == null) {
-            sender.sendMessage(plugin.getMessage("claim-no-items"));
+        UUID playerUUID = player.getUniqueId();
+        int claimedCount = 0;
+
+        // Get all pending items for the player
+        ItemStack[] pendingItems = pendingItemsManager.getPendingItems(playerUUID);
+        if (pendingItems == null || pendingItems.length == 0) {
+            player.sendMessage(plugin.getMessage("claim-no-items"));
             return true;
         }
 
-        if (player.getInventory().firstEmpty() == -1) {
-            sender.sendMessage(plugin.getMessage("winner-inventory-full", "%item%", item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : item.getType().name()));
-            return true;
+        // Try to add each item to the player's inventory
+        for (ItemStack item : pendingItems) {
+            if (item == null) continue;
+
+            int firstEmpty = player.getInventory().firstEmpty();
+            if (firstEmpty != -1) {
+                player.getInventory().setItem(firstEmpty, item);
+                pendingItemsManager.removePendingItem(playerUUID, item);
+                claimedCount++;
+                String itemName = item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : item.getType().name();
+                if (!itemName.contains("{")) {
+                    itemName = itemName.replace("_", " ").replace("DIAMOND", "Diamond").replace("SWORD", "Sword");
+                }
+                player.sendMessage(plugin.getMessage("claim-success", "%item%", itemName));
+            }
         }
 
-        player.getInventory().addItem(item);
-        pendingItemsManager.removePendingItem(player.getUniqueId());
-        sender.sendMessage(plugin.getMessage("claim-success", "%item%", item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : item.getType().name()));
+        if (claimedCount == 0) {
+            player.sendMessage(plugin.getMessage("claim-no-space"));
+        }
+
         return true;
     }
 }

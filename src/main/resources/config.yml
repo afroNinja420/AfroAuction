@@ -36,6 +36,9 @@ hologram-line-spacing: 0.25
 hologram-item-offset: 0.25
 hologram-update-interval: 20
 
+# Default color for item names without custom color (e.g., &b for aqua)
+default-item-color: "&b"
+
 messages:
   player-only: "&cOnly players can use this command!"
   no-permission: "&cYou do not have permission to %action%!"
@@ -66,6 +69,7 @@ messages:
   hologram-item: "&e%item%"
   claim-no-items: "&cYou have no items to claim!"
   claim-success: "&aYou claimed %item%!"
+  claim-no-space: "&cYour inventory has no space for all items. Some remain queued."
   gui-title: "&aAuction: %item%"
   gui-info-title: "&eAuction Info"
   gui-bid-label: "&aCurrent Bid: $%bid%"

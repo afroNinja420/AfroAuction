@@ -82,6 +82,10 @@ public class Auction {
         if (hologramEntities.isEmpty()) return;
 
         String itemName = item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : item.getType().name();
+        // Format item name: title case with spaces if no custom name
+        if (!itemName.contains("{")) { // No custom name (JSON)
+            itemName = itemName.replace("_", " ").replace("DIAMOND", "Diamond").replace("SWORD", "Sword");
+        }
         String bidLine = highestBidder == null
                 ? plugin.getMessage("hologram-bid-starting", "%price%", String.format("%.2f", currentBid))
                 : plugin.getMessage("hologram-bid-highest", "%price%", String.format("%.2f", currentBid));
@@ -135,6 +139,9 @@ public class Auction {
             Player previousBidder = plugin.getServer().getPlayer(highestBidder);
             if (previousBidder != null) {
                 String itemName = item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : item.getType().name();
+                if (!itemName.contains("{")) {
+                    itemName = itemName.replace("_", " ").replace("DIAMOND", "Diamond").replace("SWORD", "Sword");
+                }
                 previousBidder.sendMessage(plugin.getMessage("outbid", "%item%", itemName));
                 plugin.getEconomy().depositPlayer(previousBidder, currentBid);
             }
@@ -145,6 +152,9 @@ public class Auction {
         highestBidder = player.getUniqueId();
 
         String itemName = item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : item.getType().name();
+        if (!itemName.contains("{")) {
+            itemName = itemName.replace("_", " ").replace("DIAMOND", "Diamond").replace("SWORD", "Sword");
+        }
         player.sendMessage(plugin.getMessage("bid-placed", "%bid%", String.format("%.2f", bid), "%item%", itemName));
         player.playSound(player.getLocation(), plugin.getConfig().getString("bid-sound", "ENTITY_EXPERIENCE_ORB_PICKUP"), 1.0f, 1.0f);
 
@@ -160,6 +170,9 @@ public class Auction {
         hologramEntities.clear();
 
         String itemName = item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : item.getType().name();
+        if (!itemName.contains("{")) {
+            itemName = itemName.replace("_", " ").replace("DIAMOND", "Diamond").replace("SWORD", "Sword");
+        }
         if (highestBidder == null) {
             plugin.getPendingItemsManager().addPendingItem(creator, item);
             Player creatorPlayer = plugin.getServer().getPlayer(creator);
