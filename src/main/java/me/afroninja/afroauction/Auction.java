@@ -29,8 +29,9 @@ public class Auction {
     private int bidCount;
     private long endTime;
     private final BukkitRunnable timerTask;
-    private ArmorStand infoHologram;
-    private ArmorStand itemHologram;
+    private ArmorStand bidHologram; // New: for Starting/Highest Bid
+    private ArmorStand timeHologram; // New: for Time
+    private ArmorStand itemHologram; // Existing: for item name
     private Item floatingItem;
 
     public Auction(AfroAuction plugin, UUID creator, Location chestLocation, ItemStack item, double startPrice, int durationSeconds) {
@@ -153,21 +154,36 @@ public class Auction {
 
     private void spawnHolograms() {
         double baseHeight = plugin.getConfig().getDouble("hologram-base-height", 1.7);
-        double infoOffset = plugin.getConfig().getDouble("hologram-info-offset", 0.5);
+        double lineSpacing = plugin.getConfig().getDouble("hologram-line-spacing", 0.25);
         double itemOffset = plugin.getConfig().getDouble("hologram-item-offset", 0.25);
         Location center = chestLocation.clone().add(0.5, baseHeight, 0.5);
-        // Info hologram (text)
-        infoHologram = (ArmorStand) chestLocation.getWorld().spawnEntity(center.clone().add(0, infoOffset, 0), EntityType.ARMOR_STAND);
-        if (infoHologram != null) {
-            infoHologram.setInvisible(true);
-            infoHologram.setGravity(false);
-            infoHologram.setCanPickupItems(false);
-            infoHologram.setCustomNameVisible(true);
-            infoHologram.setMarker(true);
-            plugin.getLogger().info("Spawned info hologram at " + center.clone().add(0, infoOffset, 0));
+
+        // Bid hologram (Starting/Highest Bid)
+        bidHologram = (ArmorStand) chestLocation.getWorld().spawnEntity(center.clone().add(0, lineSpacing * 2, 0), EntityType.ARMOR_STAND);
+        if (bidHologram != null) {
+            bidHologram.setInvisible(true);
+            bidHologram.setGravity(false);
+            bidHologram.setCanPickupItems(false);
+            bidHologram.setCustomNameVisible(true);
+            bidHologram.setMarker(true);
+            plugin.getLogger().info("Spawned bid hologram at " + center.clone().add(0, lineSpacing * 2, 0));
         } else {
-            plugin.getLogger().severe("Failed to spawn info hologram at " + center.clone().add(0, infoOffset, 0));
+            plugin.getLogger().severe("Failed to spawn bid hologram at " + center.clone().add(0, lineSpacing * 2, 0));
         }
+
+        // Time hologram
+        timeHologram = (ArmorStand) chestLocation.getWorld().spawnEntity(center.clone().add(0, lineSpacing, 0), EntityType.ARMOR_STAND);
+        if (timeHologram != null) {
+            timeHologram.setInvisible(true);
+            timeHologram.setGravity(false);
+            timeHologram.setCanPickupItems(false);
+            timeHologram.setCustomNameVisible(true);
+            timeHologram.setMarker(true);
+            plugin.getLogger().info("Spawned time hologram at " + center.clone().add(0, lineSpacing, 0));
+        } else {
+            plugin.getLogger().severe("Failed to spawn time hologram at " + center.clone().add(0, lineSpacing, 0));
+        }
+
         // Item hologram (name)
         itemHologram = (ArmorStand) chestLocation.getWorld().spawnEntity(center, EntityType.ARMOR_STAND);
         if (itemHologram != null) {
@@ -180,6 +196,7 @@ public class Auction {
         } else {
             plugin.getLogger().severe("Failed to spawn item hologram at " + center);
         }
+
         // Floating item
         floatingItem = chestLocation.getWorld().dropItem(center.clone().add(0, itemOffset, 0), item.clone());
         if (floatingItem != null) {
@@ -190,30 +207,67 @@ public class Auction {
         } else {
             plugin.getLogger().severe("Failed to spawn floating item at " + center.clone().add(0, itemOffset, 0));
         }
+
         updateHolograms();
     }
 
     private void updateHolograms() {
-        if (infoHologram == null || itemHologram == null || floatingItem == null) {
+        if (bidHologram == null || timeHologram == null || itemHologram == null || floatingItem == null) {
             plugin.getLogger().warning("Cannot update holograms: one or more entities are null");
             return;
         }
-        if (infoHologram.isDead() || itemHologram.isDead() || floatingItem.isDead()) {
+        if (bidHologram.isDead() || timeHologram.isDead() || itemHologram.isDead() || floatingItem.isDead()) {
             plugin.getLogger().warning("Cannot update holograms: one or more entities are dead");
             return;
         }
+
         String itemName = item.hasItemMeta() && item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : item.getType().name();
-        itemHologram.setCustomName(ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("messages.hologram-item", "&e%item%").replace("%item%", itemName)));
-        infoHologram.setCustomName(ChatColor.translateAlternateColorCodes('&', plugin.getConfig().getString("messages.hologram-info", "&aPrice: $%price% | Time: %time%s")
-                .replace("%price%", String.format("%.2f", currentPrice))
-                .replace("%time%", String.valueOf(getTimeLeftSeconds()))));
-        plugin.getLogger().info("Updated holograms: Item=" + itemName + ", Price=$" + currentPrice + ", Time=" + getTimeLeftSeconds() + "s");
+
+        // Item hologram
+        itemHologram.setCustomName(ChatColor.translateAlternateColorCodes('&',
+                plugin.getConfig().getString("messages.hologram-item", "&e%item%").replace("%item%", itemName)));
+
+        // Bid hologram
+        String bidKey = bidCount == 0 ? "hologram-bid-starting" : "hologram-bid-highest";
+        bidHologram.setCustomName(ChatColor.translateAlternateColorCodes('&',
+                plugin.getConfig().getString("messages." + bidKey, "&a" + (bidCount == 0 ? "Starting" : "Highest") + " Bid: $%price%")
+                        .replace("%price%", String.format("%.2f", currentPrice))));
+
+        // Time hologram
+        timeHologram.setCustomName(ChatColor.translateAlternateColorCodes('&',
+                plugin.getConfig().getString("messages.hologram-time", "&aTime: %time%")
+                        .replace("%time%", formatTime(getTimeLeftSeconds()))));
+
+        plugin.getLogger().info("Updated holograms: Item=" + itemName + ", Price=$" + currentPrice + ", Time=" + formatTime(getTimeLeftSeconds()));
+    }
+
+    private String formatTime(long seconds) {
+        if (seconds <= 0) return "0s";
+
+        long days = seconds / (24 * 3600);
+        seconds %= (24 * 3600);
+        long hours = seconds / 3600;
+        seconds %= 3600;
+        long minutes = seconds / 60;
+        seconds %= 60;
+
+        StringBuilder time = new StringBuilder();
+        if (days > 0) time.append(days).append("d, ");
+        if (hours > 0 || days > 0) time.append(hours).append("h, ");
+        if (minutes > 0 || hours > 0 || days > 0) time.append(minutes).append("m, ");
+        time.append(seconds).append("s");
+
+        return time.toString();
     }
 
     private void removeHolograms() {
-        if (infoHologram != null && !infoHologram.isDead()) {
-            infoHologram.remove();
-            plugin.getLogger().info("Removed info hologram");
+        if (bidHologram != null && !bidHologram.isDead()) {
+            bidHologram.remove();
+            plugin.getLogger().info("Removed bid hologram");
+        }
+        if (timeHologram != null && !timeHologram.isDead()) {
+            timeHologram.remove();
+            plugin.getLogger().info("Removed time hologram");
         }
         if (itemHologram != null && !itemHologram.isDead()) {
             itemHologram.remove();
@@ -223,7 +277,8 @@ public class Auction {
             floatingItem.remove();
             plugin.getLogger().info("Removed floating item");
         }
-        infoHologram = null;
+        bidHologram = null;
+        timeHologram = null;
         itemHologram = null;
         floatingItem = null;
     }

@@ -44,12 +44,10 @@ public class AuctionCommand implements CommandExecutor {
         }
 
         double startPrice;
-        int durationSeconds;
         try {
             startPrice = Double.parseDouble(args[0]);
-            durationSeconds = Integer.parseInt(args[1]);
         } catch (NumberFormatException e) {
-            player.sendMessage(getMessage("invalid-numbers"));
+            player.sendMessage(getMessage("invalid-price-format"));
             return true;
         }
 
@@ -63,12 +61,20 @@ public class AuctionCommand implements CommandExecutor {
             return true;
         }
 
+        int durationSeconds;
+        try {
+            durationSeconds = parseDuration(args[1]);
+        } catch (IllegalArgumentException e) {
+            player.sendMessage(getMessage("invalid-duration-format"));
+            return true;
+        }
+
         int minDuration = plugin.getConfig().getInt("min-auction-duration");
         int maxDuration = plugin.getConfig().getInt("max-auction-duration");
         if (durationSeconds < minDuration || durationSeconds > maxDuration) {
             player.sendMessage(getMessage("invalid-duration", Map.of(
-                    "min_duration", String.valueOf(minDuration),
-                    "max_duration", String.valueOf(maxDuration)
+                    "min_duration", formatDuration(minDuration),
+                    "max_duration", formatDuration(maxDuration)
             )));
             return true;
         }
@@ -118,9 +124,65 @@ public class AuctionCommand implements CommandExecutor {
         player.sendMessage(getMessage("auction-created", Map.of(
                 "item", itemName,
                 "price", String.format("%.2f", startPrice),
-                "duration", String.valueOf(durationSeconds)
+                "duration", formatDuration(durationSeconds)
         )));
         return true;
+    }
+
+    private int parseDuration(String input) {
+        if (input == null || input.isEmpty()) {
+            throw new IllegalArgumentException("Empty duration");
+        }
+
+        Pattern pattern = Pattern.compile("(\\d+)([dhms])", Pattern.CASE_INSENSITIVE);
+        Matcher matcher = pattern.matcher(input);
+        int totalSeconds = 0;
+
+        while (matcher.find()) {
+            int value = Integer.parseInt(matcher.group(1));
+            String unit = matcher.group(2).toLowerCase();
+            switch (unit) {
+                case "d":
+                    totalSeconds += value * 24 * 3600;
+                    break;
+                case "h":
+                    totalSeconds += value * 3600;
+                    break;
+                case "m":
+                    totalSeconds += value * 60;
+                    break;
+                case "s":
+                    totalSeconds += value;
+                    break;
+                default:
+                    throw new IllegalArgumentException("Invalid unit: " + unit);
+            }
+        }
+
+        if (totalSeconds == 0) {
+            throw new IllegalArgumentException("No valid duration found");
+        }
+
+        return totalSeconds;
+    }
+
+    private String formatDuration(int seconds) {
+        if (seconds <= 0) return "0s";
+
+        long days = seconds / (24 * 3600);
+        seconds %= (24 * 3600);
+        long hours = seconds / 3600;
+        seconds %= 3600;
+        long minutes = seconds / 60;
+        seconds %= 60;
+
+        StringBuilder time = new StringBuilder();
+        if (days > 0) time.append(days).append("d, ");
+        if (hours > 0 || days > 0) time.append(hours).append("h, ");
+        if (minutes > 0 || hours > 0 || days > 0) time.append(minutes).append("m, ");
+        time.append(seconds).append("s");
+
+        return time.toString();
     }
 
     private String getMessage(String key) {
