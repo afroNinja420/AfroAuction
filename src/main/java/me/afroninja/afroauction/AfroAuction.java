@@ -7,8 +7,6 @@ import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class AfroAuction extends JavaPlugin {
     private Economy economy;
@@ -93,33 +91,20 @@ public class AfroAuction extends JavaPlugin {
             message = "&cMissing message: " + key;
         }
 
-        // Pattern to match color codes (§ followed by 0-9, a-f, k-o, r)
-        Pattern colorPattern = Pattern.compile("§[0-9a-fk-or]");
-        String lastColor = "&f"; // Default to white if no color found
-
         // Replace placeholders
         for (int i = 0; i < placeholders.length; i += 2) {
             String placeholder = placeholders[i];
             String value = placeholders[i + 1];
             if (placeholder.equals("%item%")) {
-                // Find the last color code before %item%
-                Matcher matcher = colorPattern.matcher(message);
-                while (matcher.find()) {
-                    if (message.indexOf(placeholder, matcher.start()) >= matcher.start()) {
-                        lastColor = matcher.group();
-                    }
-                }
                 // Format item name: title case with spaces if no custom name
                 String itemName = value;
                 if (!itemName.contains("{")) { // No custom name (JSON)
                     itemName = formatItemName(itemName);
                 }
-                // Apply default color if no custom color, otherwise use existing color
+                // Apply default color if no custom color
                 if (!itemName.contains("§")) {
                     String defaultItemColor = config.getString("default-item-color", "&b").replace("&", "§"); // Default aqua
-                    itemName = defaultItemColor + itemName + "§r" + lastColor.replace("§", "&");
-                } else {
-                    itemName = itemName + "§r" + lastColor.replace("§", "&");
+                    itemName = defaultItemColor + itemName;
                 }
                 message = message.replace(placeholder, itemName);
             } else {
