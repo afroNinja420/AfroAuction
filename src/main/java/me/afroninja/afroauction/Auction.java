@@ -18,13 +18,13 @@ public class Auction {
     private double currentPrice;
     private UUID highestBidder;
     private int bidCount;
-    private long endTime; // System time in ms when auction ends
+    private long endTime;
     private final BukkitRunnable timerTask;
 
     public Auction(AfroAuction plugin, Location chestLocation, ItemStack item, double startPrice, int durationSeconds) {
         this.plugin = plugin;
         this.chestLocation = chestLocation;
-        this.item = item.clone(); // Clone to prevent modifications
+        this.item = item.clone();
         this.startPrice = startPrice;
         this.currentPrice = startPrice;
         this.bidCount = 0;
@@ -38,18 +38,17 @@ public class Auction {
                 }
             }
         };
-        this.timerTask.runTaskTimer(plugin, 0L, 20L); // Check every second
+        this.timerTask.runTaskTimer(plugin, 0L, 20L);
     }
 
     public boolean placeBid(Player player, double bidAmount) {
         if (bidAmount < currentPrice + plugin.getConfig().getDouble("min-bid-increment")) {
-            return false; // Bid too low
+            return false;
         }
         if (!plugin.getEconomy().has(player, bidAmount)) {
-            return false; // Insufficient funds
+            return false;
         }
 
-        // Refund previous bidder
         if (highestBidder != null) {
             Player previousBidder = Bukkit.getPlayer(highestBidder);
             if (previousBidder != null) {
@@ -58,7 +57,6 @@ public class Auction {
             }
         }
 
-        // Deduct new bid
         plugin.getEconomy().withdrawPlayer(player, bidAmount);
         currentPrice = bidAmount;
         highestBidder = player.getUniqueId();
@@ -90,13 +88,15 @@ public class Auction {
             Player winner = Bukkit.getPlayer(highestBidder);
             if (winner != null) {
                 winner.getInventory().addItem(item);
+                winner.sendMessage(ChatColor.GREEN + "You received " + itemName + " from the auction!");
             } else {
-                // TODO: Handle offline winner (e.g., store item)
-                plugin.getLogger().warning("Winner offline: " + Bukkit.getOfflinePlayer(highestBidder).getName());
+                plugin.getPendingItemsManager().addPendingItem(highestBidder, item);
+                plugin.getLogger().info("Stored auction item for offline winner: " + Bukkit.getOfflinePlayer(highestBidder).getName());
             }
         }
     }
 
+    // Getters for serialization
     public Location getChestLocation() {
         return chestLocation;
     }
@@ -117,11 +117,24 @@ public class Auction {
         return bidCount;
     }
 
-    public long getTimeLeftSeconds() {
-        return Math.max(0, (endTime - System.currentTimeMillis()) / 1000);
+    public long getEndTime() {
+        return endTime;
     }
 
     public UUID getHighestBidder() {
         return highestBidder;
+    }
+
+    // Setters for deserialization
+    public void setCurrentPrice(double currentPrice) {
+        this.currentPrice = currentPrice;
+    }
+
+    public void setHighestBidder(UUID highestBidder) {
+        this.highestBidder = highestBidder;
+    }
+
+    public void setBidCount(int bidCount) {
+        this.bidCount = bidCount;
     }
 }

@@ -67,7 +67,7 @@ public class AuctionCommand implements CommandExecutor {
 
             Auction auction = new Auction(plugin, targetBlock.getLocation(), item, startPrice, durationSeconds);
             auctionManager.addAuction(auction);
-            player.getInventory().setItemInMainHand(null); // Remove item
+            player.getInventory().setItemInMainHand(null);
             player.sendMessage(ChatColor.GREEN + "Auction created for " + item.getType().name() + "!");
             return true;
 

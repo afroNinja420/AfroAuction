@@ -6,6 +6,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public final class AfroAuction extends JavaPlugin {
     private AuctionManager auctionManager;
+    private PendingItemsManager pendingItemsManager;
     private Economy economy;
 
     @Override
@@ -17,14 +18,18 @@ public final class AfroAuction extends JavaPlugin {
             return;
         }
         auctionManager = new AuctionManager(this);
+        pendingItemsManager = new PendingItemsManager(this);
         getCommand("createauction").setExecutor(new AuctionCommand(this, auctionManager));
         getServer().getPluginManager().registerEvents(new AuctionListener(this, auctionManager), this);
+        getServer().getPluginManager().registerEvents(new PlayerJoinListener(pendingItemsManager), this);
+        auctionManager.loadAuctions(); // Load saved auctions
         getLogger().info("AfroAuction has been enabled!");
     }
 
     @Override
     public void onDisable() {
         if (auctionManager != null) auctionManager.saveAuctions();
+        if (pendingItemsManager != null) pendingItemsManager.savePendingItems();
         getLogger().info("AfroAuction has been disabled!");
     }
 
@@ -42,6 +47,10 @@ public final class AfroAuction extends JavaPlugin {
 
     public AuctionManager getAuctionManager() {
         return auctionManager;
+    }
+
+    public PendingItemsManager getPendingItemsManager() {
+        return pendingItemsManager;
     }
 
     public Economy getEconomy() {
