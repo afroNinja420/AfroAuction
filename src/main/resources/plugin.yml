@@ -1,23 +1,21 @@
 name: AfroAuction
-version: ${project.version}
+version: 1.0-SNAPSHOT
 main: me.afroninja.afroauction.AfroAuction
 api-version: 1.20
-author: AfroNinja
-description: A plugin to turn chests into auction shops with bidding and timers.
-depend: [Vault]
+depend: [Vault, HolographicDisplays]
 commands:
   createauction:
-    description: Turns a chest into an auction for the item in your hand.
-    usage: /<command> <startPrice> <durationSeconds>
+    description: Create a new auction
+    usage: /<command> <startPrice> <duration>
     permission: afroauction.create
   auctionclaim:
-    description: Claims pending auction items won when your inventory was full.
+    description: Claim pending auction items
     usage: /<command>
     permission: afroauction.claim
 permissions:
   afroauction.create:
-    description: Allows creating an auction chest.
-    default: op
+    description: Allows creating auctions
+    default: true
   afroauction.claim:
-    description: Allows claiming pending auction items.
+    description: Allows claiming pending items
     default: true
