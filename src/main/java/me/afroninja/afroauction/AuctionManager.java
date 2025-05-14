@@ -1,98 +1,112 @@
 package me.afroninja.afroauction;
 
 import org.bukkit.Location;
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.inventory.ItemStack;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 public class AuctionManager {
     private final AfroAuction plugin;
-    private final Map<Location, Auction> activeAuctions = new HashMap<>();
-    private final File auctionsFile;
-    private final YamlConfiguration auctionsConfig;
+    private final List<Auction> auctions;
+    private final Map<UUID, Long> lastAuctionTimes;
 
     public AuctionManager(AfroAuction plugin) {
         this.plugin = plugin;
-        this.auctionsFile = new File(plugin.getDataFolder(), "auctions.yml");
-        this.auctionsConfig = YamlConfiguration.loadConfiguration(auctionsFile);
+        this.auctions = new ArrayList<>();
+        this.lastAuctionTimes = new HashMap<>();
     }
 
-    public void createAuction(UUID creator, Location chestLocation, ItemStack item, double startPrice, int durationSeconds) {
-        Auction auction = new Auction(plugin, creator, chestLocation, item, startPrice, durationSeconds);
-        activeAuctions.put(chestLocation, auction);
+    public void addAuction(Auction auction) {
+        auctions.add(auction);
+        lastAuctionTimes.put(auction.getCreator(), System.currentTimeMillis());
         saveAuctions();
     }
 
-    public Auction getAuction(Location chestLocation) {
-        return activeAuctions.get(chestLocation);
-    }
-
-    public void removeAuction(Location chestLocation) {
-        activeAuctions.remove(chestLocation);
+    public void removeAuction(Auction auction) {
+        auctions.remove(auction);
         saveAuctions();
     }
 
-    public Map<Location, Auction> getActiveAuctions() {
-        return new HashMap<>(activeAuctions); // Return a copy to prevent external modification
+    public Auction getAuction(Location location) {
+        for (Auction auction : auctions) {
+            Location auctionLoc = auction.getChestLocation();
+            if (auctionLoc.getWorld().equals(location.getWorld()) &&
+                    auctionLoc.getBlockX() == location.getBlockX() &&
+                    auctionLoc.getBlockY() == location.getBlockY() &&
+                    auctionLoc.getBlockZ() == location.getBlockZ()) {
+                return auction;
+            }
+        }
+        return null;
+    }
+
+    public List<Auction> getActiveAuctions(UUID playerUUID) {
+        List<Auction> playerAuctions = new ArrayList<>();
+        for (Auction auction : auctions) {
+            if (auction.getCreator().equals(playerUUID)) {
+                playerAuctions.add(auction);
+            }
+        }
+        return playerAuctions;
+    }
+
+    public long getLastAuctionTime(UUID playerUUID) {
+        return lastAuctionTimes.getOrDefault(playerUUID, 0L);
     }
 
     public void saveAuctions() {
-        auctionsConfig.set("auctions", null); // Clear existing data
-        int index = 0;
-        for (Map.Entry<Location, Auction> entry : activeAuctions.entrySet()) {
-            String path = "auctions." + index;
-            auctionsConfig.set(path + ".creator", entry.getValue().getCreator().toString());
-            auctionsConfig.set(path + ".location", entry.getKey());
-            auctionsConfig.set(path + ".item", entry.getValue().getItem());
-            auctionsConfig.set(path + ".startPrice", entry.getValue().getStartPrice());
-            auctionsConfig.set(path + ".currentPrice", entry.getValue().getCurrentPrice());
-            if (entry.getValue().getHighestBidder() != null) {
-                auctionsConfig.set(path + ".highestBidder", entry.getValue().getHighestBidder().toString());
+        File file = new File(plugin.getDataFolder(), "auctions.yml");
+        YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
+
+        config.set("auctions", null);
+        for (int i = 0; i < auctions.size(); i++) {
+            Auction auction = auctions.get(i);
+            config.set("auctions." + i + ".creator", auction.getCreator().toString());
+            config.set("auctions." + i + ".item", auction.getItem());
+            config.set("auctions." + i + ".chestLocation", auction.getChestLocation());
+            config.set("auctions." + i + ".currentBid", auction.getCurrentBid());
+            if (auction.getHighestBidder() != null) {
+                config.set("auctions." + i + ".highestBidder", auction.getHighestBidder().toString());
             }
-            auctionsConfig.set(path + ".bidCount", entry.getValue().getBidCount());
-            auctionsConfig.set(path + ".endTime", entry.getValue().getEndTime());
-            index++;
+            config.set("auctions." + i + ".endTime", auction.getEndTime());
         }
+
         try {
-            auctionsConfig.save(auctionsFile);
+            config.save(file);
         } catch (IOException e) {
-            plugin.getLogger().severe("Failed to save auctions: " + e.getMessage());
+            plugin.getLogger().severe("Could not save auctions.yml: " + e.getMessage());
         }
     }
 
     public void loadAuctions() {
-        activeAuctions.clear();
-        ConfigurationSection auctionsSection = auctionsConfig.getConfigurationSection("auctions");
-        if (auctionsSection == null) {
+        File file = new File(plugin.getDataFolder(), "auctions.yml");
+        if (!file.exists()) {
             return;
         }
-        for (String key : auctionsSection.getKeys(false)) {
-            String path = "auctions." + key;
-            try {
-                UUID creator = UUID.fromString(auctionsConfig.getString(path + ".creator"));
-                Location location = (Location) auctionsConfig.get(path + ".location");
-                ItemStack item = auctionsConfig.getItemStack(path + ".item");
-                double startPrice = auctionsConfig.getDouble(path + ".startPrice");
-                double currentPrice = auctionsConfig.getDouble(path + ".currentPrice");
-                String highestBidderStr = auctionsConfig.getString(path + ".highestBidder");
-                UUID highestBidder = highestBidderStr != null ? UUID.fromString(highestBidderStr) : null;
-                int bidCount = auctionsConfig.getInt(path + ".bidCount");
-                long endTime = auctionsConfig.getLong(path + ".endTime");
 
-                Auction auction = new Auction(plugin, creator, location, item, startPrice, 0); // Duration set later
-                auction.setCurrentPrice(currentPrice);
-                auction.setHighestBidder(highestBidder);
-                auction.setBidCount(bidCount);
-                auction.setEndTime(endTime);
-                activeAuctions.put(location, auction);
+        YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
+        if (!config.contains("auctions")) {
+            return;
+        }
+
+        for (String key : config.getConfigurationSection("auctions").getKeys(false)) {
+            try {
+                UUID creator = UUID.fromString(config.getString("auctions." + key + ".creator"));
+                ItemStack item = config.getItemStack("auctions." + key + ".item");
+                Location chestLocation = (Location) config.get("auctions." + key + ".chestLocation");
+                double currentBid = config.getDouble("auctions." + key + ".currentBid");
+                UUID highestBidder = config.contains("auctions." + key + ".highestBidder") ? UUID.fromString(config.getString("auctions." + key + ".highestBidder")) : null;
+                long endTime = config.getLong("auctions." + key + ".endTime");
+
+                Auction auction = new Auction(plugin, creator, item, chestLocation, currentBid, (endTime - System.currentTimeMillis()) / 1000);
+                if (highestBidder != null) {
+                    auction.placeBid(plugin.getServer().getPlayer(highestBidder), currentBid);
+                }
+                auctions.add(auction);
             } catch (Exception e) {
-                plugin.getLogger().warning("Failed to load auction at " + path + ": " + e.getMessage());
+                plugin.getLogger().warning("Failed to load auction " + key + ": " + e.getMessage());
             }
         }
     }

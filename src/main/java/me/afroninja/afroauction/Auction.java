@@ -1,371 +1,205 @@
 package me.afroninja.afroauction;
 
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
+import com.gmail.filoghost.holographicdisplays.api.Hologram;
+import com.gmail.filoghost.holographicdisplays.api.HologramsAPI;
 import org.bukkit.Location;
-import org.bukkit.Sound;
-import org.bukkit.entity.ArmorStand;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.Item;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.util.Vector;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class Auction {
     private final AfroAuction plugin;
     private final UUID creator;
-    private final Location chestLocation;
     private final ItemStack item;
-    private final double startPrice;
-    private double currentPrice;
+    private final Location chestLocation;
+    private double currentBid;
     private UUID highestBidder;
-    private int bidCount;
-    private long endTime;
-    private final BukkitRunnable timerTask;
-    private ArmorStand bidHologram; // New: for Starting/Highest Bid
-    private ArmorStand timeHologram; // New: for Time
-    private ArmorStand itemHologram; // Existing: for item name
-    private Item floatingItem;
+    private final long endTime;
+    private Hologram hologram;
+    private final BukkitRunnable updateTask;
 
-    public Auction(AfroAuction plugin, UUID creator, Location chestLocation, ItemStack item, double startPrice, int durationSeconds) {
+    public Auction(AfroAuction plugin, UUID creator, ItemStack item, Location chestLocation, double startingBid, long duration) {
         this.plugin = plugin;
         this.creator = creator;
-        this.chestLocation = chestLocation;
         this.item = item.clone();
-        this.startPrice = startPrice;
-        this.currentPrice = startPrice;
-        this.bidCount = 0;
-        this.endTime = System.currentTimeMillis() + (durationSeconds * 1000L);
-        spawnHolograms();
-        this.timerTask = new BukkitRunnable() {
+        this.chestLocation = chestLocation;
+        this.currentBid = startingBid;
+        this.highestBidder = null;
+        this.endTime = System.currentTimeMillis() + (duration * 1000);
+
+        createHologram();
+        updateHologram();
+
+        this.updateTask = new BukkitRunnable() {
             @Override
             public void run() {
-                updateHolograms();
+                updateHologram();
                 if (System.currentTimeMillis() >= endTime) {
                     endAuction();
                     cancel();
                 }
             }
         };
-        this.timerTask.runTaskTimer(plugin, 0L, plugin.getConfig().getLong("hologram-update-interval", 20));
+        updateTask.runTaskTimer(plugin, 0L, plugin.getConfig().getLong("hologram-update-interval", 20L));
     }
 
-    public boolean placeBid(Player player, double bidAmount) {
-        double minBid = currentPrice + plugin.getConfig().getDouble("min-bid-increment");
-        String itemName = item.hasItemMeta() && item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : item.getType().name();
-        if (bidAmount < minBid) {
-            player.sendMessage(getMessage("bid-too-low", Map.of("min_bid", String.format("%.2f", minBid))));
-            return false;
-        }
-        if (!plugin.getEconomy().has(player, bidAmount)) {
-            player.sendMessage(getMessage("insufficient-funds", Map.of("bid", String.format("%.2f", bidAmount))));
-            return false;
-        }
-        if (!plugin.getConfig().getBoolean("allow-self-bidding") && player.getUniqueId().equals(creator)) {
-            player.sendMessage(getMessage("self-bid-disallowed", Map.of()));
-            return false;
-        }
-
-        if (highestBidder != null) {
-            Player previousBidder = Bukkit.getPlayer(highestBidder);
-            if (previousBidder != null) {
-                plugin.getEconomy().depositPlayer(previousBidder, currentPrice);
-                previousBidder.sendMessage(getMessage("outbid", Map.of("item", itemName)));
-            }
-        }
-
-        plugin.getEconomy().withdrawPlayer(player, bidAmount);
-        currentPrice = bidAmount;
-        highestBidder = player.getUniqueId();
-        bidCount++;
-        player.playSound(player.getLocation(), Sound.valueOf(plugin.getConfig().getString("bid-sound")), 1.0f, 1.0f);
-        player.sendMessage(getMessage("bid-placed", Map.of(
-                "bid", String.format("%.2f", bidAmount),
-                "item", itemName
-        )));
-        updateHolograms();
-        return true;
-    }
-
-    private void endAuction() {
-        removeHolograms();
-        plugin.getAuctionManager().removeAuction(chestLocation);
-        String itemName = item.hasItemMeta() && item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : item.getType().name();
-        String winnerName = highestBidder == null ? "No one" : Bukkit.getOfflinePlayer(highestBidder).getName();
-        String message = getMessage("auction-ended", Map.of(
-                "winner", winnerName,
-                "item", itemName,
-                "price", String.format("%.2f", currentPrice)
-        ));
-
-        if (plugin.getConfig().getBoolean("broadcast-auction-end")) {
-            Bukkit.broadcastMessage(message);
-        } else if (highestBidder != null) {
-            Player winner = Bukkit.getPlayer(highestBidder);
-            if (winner != null) {
-                winner.sendMessage(message);
-            }
-        }
-
-        // Handle winner (if any)
-        if (highestBidder != null) {
-            Player winner = Bukkit.getPlayer(highestBidder);
-            if (winner != null) {
-                Map<Integer, ItemStack> undelivered = winner.getInventory().addItem(item);
-                if (undelivered.isEmpty()) {
-                    winner.sendMessage(getMessage("winner-received", Map.of("item", itemName)));
-                } else {
-                    plugin.getPendingItemsManager().addPendingItem(highestBidder, item);
-                    winner.sendMessage(getMessage("winner-inventory-full", Map.of("item", itemName)));
-                    plugin.getLogger().info("Queued auction item for " + winner.getName() + " due to full inventory.");
-                }
-            } else {
-                plugin.getPendingItemsManager().addPendingItem(highestBidder, item);
-                plugin.getLogger().info("Stored auction item for offline winner: " + Bukkit.getOfflinePlayer(highestBidder).getName());
-            }
-            // Pay the creator
-            plugin.getEconomy().depositPlayer(Bukkit.getOfflinePlayer(creator), currentPrice);
-            Player creatorPlayer = Bukkit.getPlayer(creator);
-            if (creatorPlayer != null) {
-                creatorPlayer.sendMessage(getMessage("creator-paid", Map.of(
-                        "item", itemName,
-                        "price", String.format("%.2f", currentPrice),
-                        "winner", winnerName
-                )));
-            }
-            plugin.getLogger().info("Paid $" + currentPrice + " to creator " + Bukkit.getOfflinePlayer(creator).getName() + " for auction of " + itemName);
-        } else {
-            // No bids, return item to creator
-            plugin.getPendingItemsManager().addPendingItem(creator, item);
-            Player creatorPlayer = Bukkit.getPlayer(creator);
-            if (creatorPlayer != null) {
-                creatorPlayer.sendMessage(getMessage("no-bids", Map.of("item", itemName)));
-            }
-            plugin.getLogger().info("Returned auction item " + itemName + " to creator " + Bukkit.getOfflinePlayer(creator).getName() + " due to no bids.");
-        }
-    }
-
-    private void spawnHolograms() {
+    private void createHologram() {
         double baseHeight = plugin.getConfig().getDouble("hologram-base-height", 1.7);
         double lineSpacing = plugin.getConfig().getDouble("hologram-line-spacing", 0.25);
         double itemOffset = plugin.getConfig().getDouble("hologram-item-offset", 0.25);
-        Location center = chestLocation.clone().add(0.5, baseHeight, 0.5);
 
-        // Bid hologram (Starting/Highest Bid)
-        bidHologram = (ArmorStand) chestLocation.getWorld().spawnEntity(center.clone().add(0, lineSpacing * 2, 0), EntityType.ARMOR_STAND);
-        if (bidHologram != null) {
-            bidHologram.setInvisible(true);
-            bidHologram.setGravity(false);
-            bidHologram.setCanPickupItems(false);
-            bidHologram.setCustomNameVisible(true);
-            bidHologram.setMarker(true);
-            plugin.getLogger().info("Spawned bid hologram at " + center.clone().add(0, lineSpacing * 2, 0));
-        } else {
-            plugin.getLogger().severe("Failed to spawn bid hologram at " + center.clone().add(0, lineSpacing * 2, 0));
+        hologram = HologramsAPI.createHologram(plugin, chestLocation.clone().add(0.5, baseHeight, 0.5));
+        hologram.appendTextLine("");
+        hologram.appendTextLine("");
+        hologram.appendTextLine("");
+        hologram.appendItemLine(item.clone());
+
+        for (int i = 0; i < 3; i++) {
+            hologram.getLine(i).setLocation(hologram.getLocation().clone().add(0, i * lineSpacing, 0));
         }
-
-        // Time hologram
-        timeHologram = (ArmorStand) chestLocation.getWorld().spawnEntity(center.clone().add(0, lineSpacing, 0), EntityType.ARMOR_STAND);
-        if (timeHologram != null) {
-            timeHologram.setInvisible(true);
-            timeHologram.setGravity(false);
-            timeHologram.setCanPickupItems(false);
-            timeHologram.setCustomNameVisible(true);
-            timeHologram.setMarker(true);
-            plugin.getLogger().info("Spawned time hologram at " + center.clone().add(0, lineSpacing, 0));
-        } else {
-            plugin.getLogger().severe("Failed to spawn time hologram at " + center.clone().add(0, lineSpacing, 0));
-        }
-
-        // Item hologram (name)
-        itemHologram = (ArmorStand) chestLocation.getWorld().spawnEntity(center, EntityType.ARMOR_STAND);
-        if (itemHologram != null) {
-            itemHologram.setInvisible(true);
-            itemHologram.setGravity(false);
-            itemHologram.setCanPickupItems(false);
-            itemHologram.setCustomNameVisible(true);
-            itemHologram.setMarker(true);
-            plugin.getLogger().info("Spawned item hologram at " + center);
-        } else {
-            plugin.getLogger().severe("Failed to spawn item hologram at " + center);
-        }
-
-        // Floating item
-        floatingItem = chestLocation.getWorld().dropItem(center.clone().add(0, itemOffset, 0), item.clone());
-        if (floatingItem != null) {
-            floatingItem.setPickupDelay(Integer.MAX_VALUE);
-            floatingItem.setVelocity(new Vector(0, 0, 0));
-            floatingItem.setCanMobPickup(false);
-            plugin.getLogger().info("Spawned floating item at " + center.clone().add(0, itemOffset, 0));
-        } else {
-            plugin.getLogger().severe("Failed to spawn floating item at " + center.clone().add(0, itemOffset, 0));
-        }
-
-        updateHolograms();
+        hologram.getLine(3).setLocation(hologram.getLocation().clone().add(0, 3 * lineSpacing + itemOffset, 0));
     }
 
-    private void updateHolograms() {
-        if (bidHologram == null || timeHologram == null || itemHologram == null || floatingItem == null) {
-            plugin.getLogger().warning("Cannot update holograms: one or more entities are null");
-            return;
-        }
-        if (bidHologram.isDead() || timeHologram.isDead() || itemHologram.isDead() || floatingItem.isDead()) {
-            plugin.getLogger().warning("Cannot update holograms: one or more entities are dead");
-            return;
-        }
+    private void updateHologram() {
+        if (hologram == null || hologram.isDeleted()) return;
 
-        String itemName = item.hasItemMeta() && item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : item.getType().name();
+        String itemName = item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : item.getType().name();
+        String bidLine = highestBidder == null
+                ? plugin.getMessage("hologram-bid-starting", "%price%", String.format("%.2f", currentBid))
+                : plugin.getMessage("hologram-bid-highest", "%price%", String.format("%.2f", currentBid));
+        String timeLine = plugin.getMessage("hologram-time", "%time%", formatTimeRemaining());
+        String itemLine = plugin.getMessage("hologram-item", "%item%", itemName);
 
-        // Item hologram
-        itemHologram.setCustomName(ChatColor.translateAlternateColorCodes('&',
-                plugin.getConfig().getString("messages.hologram-item", "&e%item%").replace("%item%", itemName)));
-
-        // Bid hologram
-        String bidKey = bidCount == 0 ? "hologram-bid-starting" : "hologram-bid-highest";
-        bidHologram.setCustomName(ChatColor.translateAlternateColorCodes('&',
-                plugin.getConfig().getString("messages." + bidKey, "&a" + (bidCount == 0 ? "Starting" : "Highest") + " Bid: $%price%")
-                        .replace("%price%", String.format("%.2f", currentPrice))));
-
-        // Time hologram
-        timeHologram.setCustomName(ChatColor.translateAlternateColorCodes('&',
-                plugin.getConfig().getString("messages.hologram-time", "&aTime: %time%")
-                        .replace("%time%", formatTime(getTimeLeftSeconds()))));
-
-        plugin.getLogger().info("Updated holograms: Item=" + itemName + ", Price=$" + currentPrice + ", Time=" + formatTime(getTimeLeftSeconds()));
+        hologram.getLine(0).removeLine();
+        hologram.insertTextLine(0, bidLine);
+        hologram.getLine(1).removeLine();
+        hologram.insertTextLine(1, timeLine);
+        hologram.getLine(2).removeLine();
+        hologram.insertTextLine(2, itemLine);
     }
 
-    private String formatTime(long seconds) {
-        if (seconds <= 0) return "0s";
+    private String formatTimeRemaining() {
+        long remaining = (endTime - System.currentTimeMillis()) / 1000;
+        if (remaining <= 0) return "0s";
 
-        long days = seconds / (24 * 3600);
-        seconds %= (24 * 3600);
-        long hours = seconds / 3600;
-        seconds %= 3600;
-        long minutes = seconds / 60;
-        seconds %= 60;
+        long days = remaining / (24 * 3600);
+        remaining %= (24 * 3600);
+        long hours = remaining / 3600;
+        remaining %= 3600;
+        long minutes = remaining / 60;
+        long seconds = remaining % 60;
 
-        StringBuilder time = new StringBuilder();
-        if (days > 0) time.append(days).append("d, ");
-        if (hours > 0 || days > 0) time.append(hours).append("h, ");
-        if (minutes > 0 || hours > 0 || days > 0) time.append(minutes).append("m, ");
-        time.append(seconds).append("s");
-
-        return time.toString();
+        StringBuilder sb = new StringBuilder();
+        if (days > 0) sb.append(days).append("d, ");
+        if (hours > 0 || days > 0) sb.append(hours).append("h, ");
+        if (minutes > 0 || hours > 0 || days > 0) sb.append(minutes).append("m, ");
+        sb.append(seconds).append("s");
+        return sb.toString();
     }
 
-    private void removeHolograms() {
-        if (bidHologram != null && !bidHologram.isDead()) {
-            bidHologram.remove();
-            plugin.getLogger().info("Removed bid hologram");
+    public boolean placeBid(Player player, double bid) {
+        if (!plugin.getConfig().getBoolean("allow-self-bidding", false) && creator.equals(player.getUniqueId())) {
+            player.sendMessage(plugin.getMessage("self-bid-disallowed"));
+            return false;
         }
-        if (timeHologram != null && !timeHologram.isDead()) {
-            timeHologram.remove();
-            plugin.getLogger().info("Removed time hologram");
-        }
-        if (itemHologram != null && !itemHologram.isDead()) {
-            itemHologram.remove();
-            plugin.getLogger().info("Removed item hologram");
-        }
-        if (floatingItem != null && !floatingItem.isDead()) {
-            floatingItem.remove();
-            plugin.getLogger().info("Removed floating item");
-        }
-        bidHologram = null;
-        timeHologram = null;
-        itemHologram = null;
-        floatingItem = null;
-    }
 
-    private String getMessage(String key, Map<String, String> replacements) {
-        String message = plugin.getConfig().getString("messages." + key, "&cMissing message: " + key);
-        String originalMessage = message;
+        double minBid = currentBid + plugin.getConfig().getDouble("min-bid-increment", 1.0);
+        if (bid < minBid) {
+            player.sendMessage(plugin.getMessage("bid-too-low", "%min_bid%", String.format("%.2f", minBid)));
+            return false;
+        }
 
-        // Find the last color code before %item%
-        String lastColorCode = "&f"; // Default to white if no color code
-        Pattern colorPattern = Pattern.compile("&[0-9a-fk-or]");
-        Matcher matcher = colorPattern.matcher(message);
-        while (matcher.find()) {
-            if (message.indexOf("%item%", matcher.start()) >= 0) {
-                lastColorCode = matcher.group();
+        if (!plugin.getEconomy().has(player, bid)) {
+            player.sendMessage(plugin.getMessage("insufficient-funds", "%bid%", String.format("%.2f", bid)));
+            return false;
+        }
+
+        if (highestBidder != null) {
+            Player previousBidder = plugin.getServer().getPlayer(highestBidder);
+            if (previousBidder != null) {
+                String itemName = item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : item.getType().name();
+                previousBidder.sendMessage(plugin.getMessage("outbid", "%item%", itemName));
+                plugin.getEconomy().depositPlayer(previousBidder, currentBid);
             }
         }
 
-        // Replace variables
-        for (Map.Entry<String, String> entry : replacements.entrySet()) {
-            String placeholder = "%" + entry.getKey() + "%";
-            String value = entry.getValue();
-            if (entry.getKey().equals("item")) {
-                // For %item%, append RESET and the last color code
-                value = value + ChatColor.RESET + ChatColor.translateAlternateColorCodes('&', lastColorCode);
+        plugin.getEconomy().withdrawPlayer(player, bid);
+        currentBid = bid;
+        highestBidder = player.getUniqueId();
+
+        String itemName = item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : item.getType().name();
+        player.sendMessage(plugin.getMessage("bid-placed", "%bid%", String.format("%.2f", bid), "%item%", itemName));
+        player.playSound(player.getLocation(), plugin.getConfig().getString("bid-sound", "ENTITY_EXPERIENCE_ORB_PICKUP"), 1.0f, 1.0f);
+
+        updateHologram();
+        return true;
+    }
+
+    public void endAuction() {
+        updateTask.cancel();
+        if (hologram != null) {
+            hologram.delete();
+        }
+
+        String itemName = item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : item.getType().name();
+        if (highestBidder == null) {
+            plugin.getPendingItemsManager().addPendingItem(creator, item);
+            Player creatorPlayer = plugin.getServer().getPlayer(creator);
+            if (creatorPlayer != null) {
+                creatorPlayer.sendMessage(plugin.getMessage("no-bids", "%item%", itemName));
             }
-            message = message.replace(placeholder, value);
+        } else {
+            Player winner = plugin.getServer().getPlayer(highestBidder);
+            if (winner != null && winner.getInventory().firstEmpty() != -1) {
+                winner.getInventory().addItem(item);
+                winner.sendMessage(plugin.getMessage("winner-received", "%item%", itemName));
+            } else {
+                plugin.getPendingItemsManager().addPendingItem(highestBidder, item);
+                if (winner != null) {
+                    winner.sendMessage(plugin.getMessage("winner-inventory-full", "%item%", itemName));
+                }
+            }
+
+            Player creatorPlayer = plugin.getServer().getPlayer(creator);
+            if (creatorPlayer != null) {
+                plugin.getEconomy().depositPlayer(creatorPlayer, currentBid);
+                String winnerName = winner != null ? winner.getName() : plugin.getServer().getOfflinePlayer(highestBidder).getName();
+                creatorPlayer.sendMessage(plugin.getMessage("creator-paid", "%item%", itemName, "%winner%", winnerName, "%price%", String.format("%.2f", currentBid)));
+            }
+
+            if (plugin.getConfig().getBoolean("broadcast-auction-end", true)) {
+                String winnerName = winner != null ? winner.getName() : plugin.getServer().getOfflinePlayer(highestBidder).getName();
+                plugin.getServer().broadcastMessage(plugin.getMessage("auction-ended", "%item%", itemName, "%winner%", winnerName, "%price%", String.format("%.2f", currentBid)));
+            }
         }
 
-        // If no %item% is present, preserve original color handling
-        if (!originalMessage.contains("%item%")) {
-            return ChatColor.translateAlternateColorCodes('&', message);
-        }
-
-        return ChatColor.translateAlternateColorCodes('&', message);
-    }
-
-    public void setEndTime(long endTime) {
-        this.endTime = endTime;
-    }
-
-    public Location getChestLocation() {
-        return chestLocation;
-    }
-
-    public ItemStack getItem() {
-        return item.clone();
-    }
-
-    public double getStartPrice() {
-        return startPrice;
-    }
-
-    public double getCurrentPrice() {
-        return currentPrice;
-    }
-
-    public int getBidCount() {
-        return bidCount;
-    }
-
-    public long getEndTime() {
-        return endTime;
-    }
-
-    public long getTimeLeftSeconds() {
-        return Math.max(0, (endTime - System.currentTimeMillis()) / 1000);
-    }
-
-    public UUID getHighestBidder() {
-        return highestBidder;
+        plugin.getAuctionManager().removeAuction(this);
     }
 
     public UUID getCreator() {
         return creator;
     }
 
-    public void setCurrentPrice(double currentPrice) {
-        this.currentPrice = currentPrice;
-        updateHolograms();
+    public ItemStack getItem() {
+        return item;
     }
 
-    public void setHighestBidder(UUID highestBidder) {
-        this.highestBidder = highestBidder;
+    public Location getChestLocation() {
+        return chestLocation;
     }
 
-    public void setBidCount(int bidCount) {
-        this.bidCount = bidCount;
+    public double getCurrentBid() {
+        return currentBid;
+    }
+
+    public UUID getHighestBidder() {
+        return highestBidder;
+    }
+
+    public long getEndTime() {
+        return endTime;
     }
 }

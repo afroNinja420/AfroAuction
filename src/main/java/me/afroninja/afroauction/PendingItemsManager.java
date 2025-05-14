@@ -1,83 +1,71 @@
 package me.afroninja.afroauction;
 
-import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.inventory.ItemStack;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
 public class PendingItemsManager {
     private final AfroAuction plugin;
-    private final File pendingFile;
-    private final YamlConfiguration pendingConfig;
-    private final Map<UUID, List<ItemStack>> pendingItems = new HashMap<>();
+    private final Map<UUID, ItemStack> pendingItems;
 
     public PendingItemsManager(AfroAuction plugin) {
         this.plugin = plugin;
-        this.pendingFile = new File(plugin.getDataFolder(), "pending.yml");
-        this.pendingConfig = YamlConfiguration.loadConfiguration(pendingFile);
+        this.pendingItems = new HashMap<>();
     }
 
-    public void addPendingItem(UUID player, ItemStack item) {
-        pendingItems.computeIfAbsent(player, k -> new ArrayList<>()).add(item);
+    public void addPendingItem(UUID playerUUID, ItemStack item) {
+        pendingItems.put(playerUUID, item.clone());
         savePendingItems();
     }
 
-    public List<ItemStack> getPendingItems(UUID player) {
-        return new ArrayList<>(pendingItems.getOrDefault(player, new ArrayList<>()));
+    public ItemStack getPendingItem(UUID playerUUID) {
+        return pendingItems.get(playerUUID);
     }
 
-    public void clearPendingItems(UUID player) {
-        pendingItems.remove(player);
+    public void removePendingItem(UUID playerUUID) {
+        pendingItems.remove(playerUUID);
         savePendingItems();
     }
 
     public void savePendingItems() {
-        pendingConfig.set("pending", null); // Clear existing data
-        for (Map.Entry<UUID, List<ItemStack>> entry : pendingItems.entrySet()) {
-            String path = "pending." + entry.getKey().toString();
-            List<ItemStack> items = entry.getValue();
-            for (int i = 0; i < items.size(); i++) {
-                pendingConfig.set(path + "." + i, items.get(i));
-            }
+        File file = new File(plugin.getDataFolder(), "pending.yml");
+        YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
+
+        config.set("pending", null);
+        for (Map.Entry<UUID, ItemStack> entry : pendingItems.entrySet()) {
+            config.set("pending." + entry.getKey().toString(), entry.getValue());
         }
+
         try {
-            pendingConfig.save(pendingFile);
+            config.save(file);
         } catch (IOException e) {
-            plugin.getLogger().severe("Failed to save pending items: " + e.getMessage());
+            plugin.getLogger().severe("Could not save pending.yml: " + e.getMessage());
         }
     }
 
     public void loadPendingItems() {
-        pendingItems.clear();
-        ConfigurationSection pendingSection = pendingConfig.getConfigurationSection("pending");
-        if (pendingSection == null) {
+        File file = new File(plugin.getDataFolder(), "pending.yml");
+        if (!file.exists()) {
             return;
         }
-        for (String uuidStr : pendingSection.getKeys(false)) {
+
+        YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
+        if (!config.contains("pending")) {
+            return;
+        }
+
+        for (String key : config.getConfigurationSection("pending").getKeys(false)) {
             try {
-                UUID uuid = UUID.fromString(uuidStr);
-                List<ItemStack> items = new ArrayList<>();
-                ConfigurationSection playerSection = pendingSection.getConfigurationSection(uuidStr);
-                if (playerSection != null) {
-                    for (String key : playerSection.getKeys(false)) {
-                        ItemStack item = playerSection.getItemStack(key);
-                        if (item != null) {
-                            items.add(item);
-                        }
-                    }
-                }
-                if (!items.isEmpty()) {
-                    pendingItems.put(uuid, items);
-                }
-            } catch (IllegalArgumentException e) {
-                plugin.getLogger().warning("Invalid UUID in pending.yml: " + uuidStr);
+                UUID playerUUID = UUID.fromString(key);
+                ItemStack item = config.getItemStack("pending." + key);
+                pendingItems.put(playerUUID, item);
+            } catch (Exception e) {
+                plugin.getLogger().warning("Failed to load pending item for " + key + ": " + e.getMessage());
             }
         }
     }
