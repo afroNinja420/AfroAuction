@@ -10,7 +10,14 @@ commands:
     description: Turns a chest into an auction for the item in your hand.
     usage: /<command> <startPrice> <durationSeconds>
     permission: afroauction.create
+  auctionclaim:
+    description: Claims pending auction items won when your inventory was full.
+    usage: /<command>
+    permission: afroauction.claim
 permissions:
   afroauction.create:
     description: Allows creating an auction chest.
     default: op
+  afroauction.claim:
+    description: Allows claiming pending auction items.
+    default: true

@@ -20,9 +20,10 @@ public final class AfroAuction extends JavaPlugin {
         auctionManager = new AuctionManager(this);
         pendingItemsManager = new PendingItemsManager(this);
         getCommand("createauction").setExecutor(new AuctionCommand(this, auctionManager));
+        getCommand("auctionclaim").setExecutor(new AuctionClaimCommand(this, pendingItemsManager));
         getServer().getPluginManager().registerEvents(new AuctionListener(this, auctionManager), this);
         getServer().getPluginManager().registerEvents(new PlayerJoinListener(pendingItemsManager), this);
-        auctionManager.loadAuctions(); // Load saved auctions
+        auctionManager.loadAuctions();
         getLogger().info("AfroAuction has been enabled!");
     }
 

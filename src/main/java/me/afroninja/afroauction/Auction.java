@@ -8,6 +8,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.scheduler.BukkitRunnable;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 public class Auction {
@@ -87,8 +89,14 @@ public class Auction {
         if (highestBidder != null) {
             Player winner = Bukkit.getPlayer(highestBidder);
             if (winner != null) {
-                winner.getInventory().addItem(item);
-                winner.sendMessage(ChatColor.GREEN + "You received " + itemName + " from the auction!");
+                Map<Integer, ItemStack> undelivered = winner.getInventory().addItem(item);
+                if (undelivered.isEmpty()) {
+                    winner.sendMessage(ChatColor.GREEN + "You received " + itemName + " from the auction!");
+                } else {
+                    plugin.getPendingItemsManager().addPendingItem(highestBidder, item);
+                    winner.sendMessage(ChatColor.YELLOW + "Your inventory is full! Use /auctionclaim to receive " + itemName + ".");
+                    plugin.getLogger().info("Queued auction item for " + winner.getName() + " due to full inventory.");
+                }
             } else {
                 plugin.getPendingItemsManager().addPendingItem(highestBidder, item);
                 plugin.getLogger().info("Stored auction item for offline winner: " + Bukkit.getOfflinePlayer(highestBidder).getName());
@@ -96,7 +104,6 @@ public class Auction {
         }
     }
 
-    // Getters for serialization
     public Location getChestLocation() {
         return chestLocation;
     }
@@ -125,7 +132,6 @@ public class Auction {
         return highestBidder;
     }
 
-    // Setters for deserialization
     public void setCurrentPrice(double currentPrice) {
         this.currentPrice = currentPrice;
     }
