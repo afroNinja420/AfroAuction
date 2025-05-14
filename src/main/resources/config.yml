@@ -1,5 +1,65 @@
-min-bid-increment: 10.0
-gui-title: "&6Auction Chest"
-auction-end-message: "&aAuction ended! %winner% won %item% for $%price%!"
-bid-sound: "ENTITY_EXPERIENCE_ORB_PICKUP"
-broadcast-auction-end: true
+# AfroAuction Configuration
+# All settings for the AfroAuction plugin
+
+# Economy Settings
+min-bid-increment: 10.0  # Minimum amount a bid must increase by
+bid-sound: ENTITY_EXPERIENCE_ORB_PICKUP  # Sound played when a bid is placed
+
+# Auction Settings
+broadcast-auction-end: true  # Broadcast auction end message to all players
+max-auction-duration: 3600  # Maximum auction duration in seconds (1 hour)
+min-auction-duration: 30  # Minimum auction duration in seconds
+max-start-price: 1000000.0  # Maximum starting price for auctions
+min-start-price: 1.0  # Minimum starting price for auctions
+allow-self-bidding: false  # Allow players to bid on their own auctions
+auction-cooldown: 60  # Cooldown between auction creations per player (seconds)
+max-active-auctions: 5  # Maximum active auctions per player
+
+# Hologram Settings
+hologram-base-height: 1.7  # Base height above chest for holograms
+hologram-info-offset: 0.5  # Vertical offset for info hologram (price/time)
+hologram-item-offset: 0.25  # Vertical offset for floating item
+hologram-update-interval: 20  # Update interval for holograms (ticks)
+hologram-visibility-range: 32  # Max distance players can see holograms (blocks)
+
+# Messages
+# Use %player% for player name, %item% for item name, %price% for price,
+# %duration% for duration, %winner% for winner name, %creator% for creator name
+messages:
+  # Command Errors
+  player-only: "&cOnly players can use this command!"
+  no-permission: "&cYou don't have permission to %action%!"
+  invalid-usage: "&cUsage: /createauction <startPrice> <durationSeconds>"
+  invalid-numbers: "&cStart price and duration must be numbers!"
+  invalid-price: "&cStart price must be between %min_price% and %max_price%!"
+  invalid-duration: "&cDuration must be between %min_duration% and %max_duration% seconds!"
+  no-item: "&cYou must be holding an item to auction!"
+  not-chest: "&cYou must be looking at a chest!"
+  chest-in-use: "&cThis chest is already an auction!"
+  cooldown: "&cYou must wait %cooldown% seconds before creating another auction!"
+  max-auctions: "&cYou have reached the maximum of %max_auctions% active auctions!"
+
+  # Auction Creation
+  auction-created: "&aAuction created for %item% at $%price% for %duration% seconds!"
+
+  # Bidding
+  bid-too-low: "&cYour bid must be at least $%min_bid%!"
+  insufficient-funds: "&cYou don't have enough money to bid $%bid%!"
+  self-bid-disallowed: "&cYou cannot bid on your own auction!"
+  bid-placed: "&aBid of $%bid% placed on %item%!"
+  outbid: "&eYou were outbid on %item%!"
+
+  # Auction End
+  auction-ended: "&6%winner% won %item% for $%price%!"
+  winner-received: "&aYou received %item% from the auction!"
+  winner-inventory-full: "&eYour inventory is full! Use /auctionclaim to receive %item%."
+  creator-paid: "&aYour auction for %item% sold for $%price% to %winner%!"
+  no-bids: "&eYour auction for %item% received no bids. Use /auctionclaim to retrieve it."
+
+  # Claim Command
+  claim-no-items: "&cYou have no items to claim!"
+  claim-success: "&aYou claimed %item%!"
+
+  # Holograms
+  hologram-item: "&e%item%"  # Item name hologram (yellow)
+  hologram-info: "&aPrice: $%price% | Time: %time%s"  # Price and time hologram (green)
