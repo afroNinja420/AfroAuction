@@ -3,6 +3,7 @@ package me.afroninja.afroauction;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.block.Chest;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -20,11 +21,11 @@ public class AuctionCommand implements CommandExecutor {
 
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (!(sender instanceof Player player)) {
+        if (!(sender instanceof Player)) {
             sender.sendMessage(ChatColor.RED + "Only players can use this command!");
             return true;
         }
-
+        Player player = (Player) sender;
         if (!player.hasPermission("afroauction.create")) {
             player.sendMessage(ChatColor.RED + "You don't have permission to create auctions!");
             return true;
@@ -35,49 +36,48 @@ public class AuctionCommand implements CommandExecutor {
             return true;
         }
 
+        double startPrice;
+        int durationSeconds;
         try {
-            double startPrice = Double.parseDouble(args[0]);
-            int durationSeconds = Integer.parseInt(args[1]);
-
-            if (startPrice < 0) {
-                player.sendMessage(ChatColor.RED + "Start price must be non-negative!");
-                return true;
-            }
-            if (durationSeconds <= 0) {
-                player.sendMessage(ChatColor.RED + "Duration must be positive!");
-                return true;
-            }
-
-            ItemStack item = player.getInventory().getItemInMainHand();
-            if (item == null || item.getType() == Material.AIR) {
-                player.sendMessage(ChatColor.RED + "You must hold an item in your main hand!");
-                return true;
-            }
-
-            Block targetBlock = player.getTargetBlock(null, 5);
-            if (targetBlock == null || targetBlock.getType() != Material.CHEST) {
-                player.sendMessage(ChatColor.RED + "You must be looking at a chest!");
-                return true;
-            }
-
-            if (auctionManager.getAuction(targetBlock.getLocation()) != null) {
-                player.sendMessage(ChatColor.RED + "This chest is already an auction!");
-                return true;
-            }
-
-            Auction auction = new Auction(plugin, targetBlock.getLocation(), item, startPrice, durationSeconds);
-            auctionManager.addAuction(auction);
-            player.getInventory().setItemInMainHand(null);
-            player.sendMessage(ChatColor.GREEN + "Auction created for " + item.getType().name() + "!");
-            return true;
-
+            startPrice = Double.parseDouble(args[0]);
+            durationSeconds = Integer.parseInt(args[1]);
         } catch (NumberFormatException e) {
-            player.sendMessage(ChatColor.RED + "Invalid start price or duration!");
-            return true;
-        } catch (Exception e) {
-            player.sendMessage(ChatColor.RED + "An error occurred while creating the auction!");
-            plugin.getLogger().severe("Error creating auction: " + e.getMessage());
+            player.sendMessage(ChatColor.RED + "Start price and duration must be numbers!");
             return true;
         }
+
+        if (startPrice <= 0) {
+            player.sendMessage(ChatColor.RED + "Start price must be greater than 0!");
+            return true;
+        }
+        if (durationSeconds <= 0) {
+            player.sendMessage(ChatColor.RED + "Duration must be greater than 0!");
+            return true;
+        }
+
+        ItemStack itemInHand = player.getInventory().getItemInMainHand();
+        if (itemInHand == null || itemInHand.getType() == Material.AIR) {
+            player.sendMessage(ChatColor.RED + "You must be holding an item to auction!");
+            return true;
+        }
+
+        Block targetBlock = player.getTargetBlockExact(5);
+        if (targetBlock == null || !(targetBlock.getState() instanceof Chest)) {
+            player.sendMessage(ChatColor.RED + "You must be looking at a chest!");
+            return true;
+        }
+
+        if (auctionManager.getAuction(targetBlock.getLocation()) != null) {
+            player.sendMessage(ChatColor.RED + "This chest is already an auction!");
+            return true;
+        }
+
+        ItemStack auctionItem = itemInHand.clone();
+        auctionItem.setAmount(1);
+        player.getInventory().setItemInMainHand(null);
+        String itemName = auctionItem.hasItemMeta() && auctionItem.getItemMeta().hasDisplayName() ? auctionItem.getItemMeta().getDisplayName() : auctionItem.getType().name();
+        auctionManager.createAuction(player.getUniqueId(), targetBlock.getLocation(), auctionItem, startPrice, durationSeconds);
+        player.sendMessage(ChatColor.GREEN + "Auction created for " + itemName + " at $" + String.format("%.2f", startPrice) + " for " + durationSeconds + " seconds!");
+        return true;
     }
 }

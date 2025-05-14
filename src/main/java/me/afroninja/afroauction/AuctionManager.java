@@ -1,8 +1,6 @@
 package me.afroninja.afroauction;
 
-import org.bukkit.Bukkit;
 import org.bukkit.Location;
-import org.bukkit.World;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.inventory.ItemStack;
@@ -16,52 +14,48 @@ import java.util.UUID;
 public class AuctionManager {
     private final AfroAuction plugin;
     private final Map<Location, Auction> auctions;
-    private final File auctionsFile;
-    private final YamlConfiguration auctionsConfig;
+    private final File auctionFile;
+    private final YamlConfiguration auctionConfig;
 
     public AuctionManager(AfroAuction plugin) {
         this.plugin = plugin;
         this.auctions = new HashMap<>();
-        this.auctionsFile = new File(plugin.getDataFolder(), "auctions.yml");
-        this.auctionsConfig = YamlConfiguration.loadConfiguration(auctionsFile);
+        this.auctionFile = new File(plugin.getDataFolder(), "auctions.yml");
+        this.auctionConfig = YamlConfiguration.loadConfiguration(auctionFile);
     }
 
-    public void addAuction(Auction auction) {
-        auctions.put(auction.getChestLocation(), auction);
+    public void createAuction(UUID creator, Location chestLocation, ItemStack item, double startPrice, int durationSeconds) {
+        Auction auction = new Auction(plugin, creator, chestLocation, item, startPrice, durationSeconds);
+        auctions.put(chestLocation, auction);
         saveAuctions();
     }
 
-    public Auction getAuction(Location location) {
-        return auctions.get(location);
+    public Auction getAuction(Location chestLocation) {
+        return auctions.get(chestLocation);
     }
 
-    public void removeAuction(Location location) {
-        auctions.remove(location);
+    public void removeAuction(Location chestLocation) {
+        auctions.remove(chestLocation);
         saveAuctions();
     }
 
     public void saveAuctions() {
-        auctionsConfig.set("auctions", null); // Clear existing data
+        auctionConfig.set("auctions", null);
         int index = 0;
-        for (Auction auction : auctions.values()) {
+        for (Map.Entry<Location, Auction> entry : auctions.entrySet()) {
             String path = "auctions." + index;
-            Location loc = auction.getChestLocation();
-            auctionsConfig.set(path + ".world", loc.getWorld().getName());
-            auctionsConfig.set(path + ".x", loc.getX());
-            auctionsConfig.set(path + ".y", loc.getY());
-            auctionsConfig.set(path + ".z", loc.getZ());
-            auctionsConfig.set(path + ".item", auction.getItem());
-            auctionsConfig.set(path + ".startPrice", auction.getStartPrice());
-            auctionsConfig.set(path + ".currentPrice", auction.getCurrentPrice());
-            auctionsConfig.set(path + ".bidCount", auction.getBidCount());
-            auctionsConfig.set(path + ".endTime", auction.getEndTime());
-            if (auction.getHighestBidder() != null) {
-                auctionsConfig.set(path + ".highestBidder", auction.getHighestBidder().toString());
-            }
+            auctionConfig.set(path + ".creator", entry.getValue().getCreator().toString());
+            auctionConfig.set(path + ".chestLocation", entry.getKey());
+            auctionConfig.set(path + ".item", entry.getValue().getItem());
+            auctionConfig.set(path + ".startPrice", entry.getValue().getStartPrice());
+            auctionConfig.set(path + ".currentPrice", entry.getValue().getCurrentPrice());
+            auctionConfig.set(path + ".highestBidder", entry.getValue().getHighestBidder() != null ? entry.getValue().getHighestBidder().toString() : null);
+            auctionConfig.set(path + ".bidCount", entry.getValue().getBidCount());
+            auctionConfig.set(path + ".endTime", entry.getValue().getEndTime());
             index++;
         }
         try {
-            auctionsConfig.save(auctionsFile);
+            auctionConfig.save(auctionFile);
         } catch (IOException e) {
             plugin.getLogger().severe("Failed to save auctions: " + e.getMessage());
         }
@@ -69,32 +63,43 @@ public class AuctionManager {
 
     public void loadAuctions() {
         auctions.clear();
-        ConfigurationSection auctionsSection = auctionsConfig.getConfigurationSection("auctions");
-        if (auctionsSection == null) return;
+        ConfigurationSection auctionSection = auctionConfig.getConfigurationSection("auctions");
+        if (auctionSection == null) return;
 
-        for (String key : auctionsSection.getKeys(false)) {
+        for (String key : auctionSection.getKeys(false)) {
             String path = "auctions." + key;
-            String worldName = auctionsConfig.getString(path + ".world");
-            World world = Bukkit.getWorld(worldName);
-            if (world == null) {
-                plugin.getLogger().warning("World " + worldName + " not found for auction " + key);
+            UUID creator = UUID.fromString(auctionConfig.getString(path + ".creator"));
+            Location chestLocation = (Location) auctionConfig.get(path + ".chestLocation");
+            ItemStack item = auctionConfig.getItemStack(path + ".item");
+            double startPrice = auctionConfig.getDouble(path + ".startPrice");
+            double currentPrice = auctionConfig.getDouble(path + ".currentPrice");
+            String highestBidderStr = auctionConfig.getString(path + ".highestBidder");
+            UUID highestBidder = highestBidderStr != null ? UUID.fromString(highestBidderStr) : null;
+            int bidCount = auctionConfig.getInt(path + ".bidCount");
+            long endTime = auctionConfig.getLong(path + ".endTime");
+
+            if (item == null || chestLocation == null) {
+                plugin.getLogger().warning("Skipping invalid auction at index " + key);
                 continue;
             }
-            double x = auctionsConfig.getDouble(path + ".x");
-            double y = auctionsConfig.getDouble(path + ".y");
-            double z = auctionsConfig.getDouble(path + ".z");
-            Location location = new Location(world, x, y, z);
-            ItemStack item = auctionsConfig.getItemStack(path + ".item");
-            double startPrice = auctionsConfig.getDouble(path + ".startPrice");
-            int durationSeconds = (int) Math.max(1, (auctionsConfig.getLong(path + ".endTime") - System.currentTimeMillis()) / 1000);
-            Auction auction = new Auction(plugin, location, item, startPrice, durationSeconds);
-            auction.setCurrentPrice(auctionsConfig.getDouble(path + ".currentPrice"));
-            auction.setBidCount(auctionsConfig.getInt(path + ".bidCount"));
-            String bidderUuid = auctionsConfig.getString(path + ".highestBidder");
-            if (bidderUuid != null) {
-                auction.setHighestBidder(UUID.fromString(bidderUuid));
-            }
-            auctions.put(location, auction);
+
+            Auction auction = new Auction(plugin, creator, chestLocation, item, startPrice, 0);
+            auction.setCurrentPrice(currentPrice);
+            auction.setHighestBidder(highestBidder);
+            auction.setBidCount(bidCount);
+            auction.setEndTime(endTime);
+            auctions.put(chestLocation, auction);
+        }
+    }
+
+    private void setEndTime(Auction auction, long endTime) {
+        try {
+            java.lang.reflect.Field endTimeField = Auction.class.getDeclaredField("endTime");
+            endTimeField.setAccessible(true);
+            endTimeField.setLong(auction, endTime);
+            endTimeField.setAccessible(false);
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            plugin.getLogger().severe("Failed to set endTime for auction: " + e.getMessage());
         }
     }
 }

@@ -18,6 +18,7 @@ import java.util.UUID;
 
 public class Auction {
     private final AfroAuction plugin;
+    private final UUID creator;
     private final Location chestLocation;
     private final ItemStack item;
     private final double startPrice;
@@ -30,8 +31,9 @@ public class Auction {
     private ArmorStand itemHologram;
     private Item floatingItem;
 
-    public Auction(AfroAuction plugin, Location chestLocation, ItemStack item, double startPrice, int durationSeconds) {
+    public Auction(AfroAuction plugin, UUID creator, Location chestLocation, ItemStack item, double startPrice, int durationSeconds) {
         this.plugin = plugin;
+        this.creator = creator;
         this.chestLocation = chestLocation;
         this.item = item.clone();
         this.startPrice = startPrice;
@@ -64,7 +66,8 @@ public class Auction {
             Player previousBidder = Bukkit.getPlayer(highestBidder);
             if (previousBidder != null) {
                 plugin.getEconomy().depositPlayer(previousBidder, currentPrice);
-                previousBidder.sendMessage(ChatColor.YELLOW + "You were outbid on " + item.getType().name() + "!");
+                String itemName = item.hasItemMeta() && item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : item.getType().name();
+                previousBidder.sendMessage(ChatColor.YELLOW + "You were outbid on " + itemName + "!");
             }
         }
 
@@ -73,7 +76,8 @@ public class Auction {
         highestBidder = player.getUniqueId();
         bidCount++;
         player.playSound(player.getLocation(), Sound.valueOf(plugin.getConfig().getString("bid-sound")), 1.0f, 1.0f);
-        player.sendMessage(ChatColor.GREEN + "Bid of $" + String.format("%.2f", bidAmount) + " placed!");
+        String itemName = item.hasItemMeta() && item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : item.getType().name();
+        player.sendMessage(ChatColor.GREEN + "Bid of $" + String.format("%.2f", bidAmount) + " placed on " + itemName + "!");
         updateHolograms();
         return true;
     }
@@ -82,8 +86,9 @@ public class Auction {
         removeHolograms();
         plugin.getAuctionManager().removeAuction(chestLocation);
         String itemName = item.hasItemMeta() && item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : item.getType().name();
+        String winnerName = highestBidder == null ? "No one" : Bukkit.getOfflinePlayer(highestBidder).getName();
         String message = plugin.getConfig().getString("auction-end-message")
-                .replace("%winner%", highestBidder == null ? "No one" : Bukkit.getOfflinePlayer(highestBidder).getName())
+                .replace("%winner%", winnerName)
                 .replace("%item%", itemName)
                 .replace("%price%", String.format("%.2f", currentPrice));
         message = ChatColor.translateAlternateColorCodes('&', message);
@@ -97,6 +102,7 @@ public class Auction {
             }
         }
 
+        // Handle winner (if any)
         if (highestBidder != null) {
             Player winner = Bukkit.getPlayer(highestBidder);
             if (winner != null) {
@@ -112,6 +118,21 @@ public class Auction {
                 plugin.getPendingItemsManager().addPendingItem(highestBidder, item);
                 plugin.getLogger().info("Stored auction item for offline winner: " + Bukkit.getOfflinePlayer(highestBidder).getName());
             }
+            // Pay the creator
+            plugin.getEconomy().depositPlayer(Bukkit.getOfflinePlayer(creator), currentPrice);
+            Player creatorPlayer = Bukkit.getPlayer(creator);
+            if (creatorPlayer != null) {
+                creatorPlayer.sendMessage(ChatColor.GREEN + "Your auction for " + itemName + " sold for $" + String.format("%.2f", currentPrice) + " to " + winnerName + "!");
+            }
+            plugin.getLogger().info("Paid $" + currentPrice + " to creator " + Bukkit.getOfflinePlayer(creator).getName() + " for auction of " + itemName);
+        } else {
+            // No bids, return item to creator
+            plugin.getPendingItemsManager().addPendingItem(creator, item);
+            Player creatorPlayer = Bukkit.getPlayer(creator);
+            if (creatorPlayer != null) {
+                creatorPlayer.sendMessage(ChatColor.YELLOW + "Your auction for " + itemName + " received no bids. Use /auctionclaim to retrieve it.");
+            }
+            plugin.getLogger().info("Returned auction item " + itemName + " to creator " + Bukkit.getOfflinePlayer(creator).getName() + " due to no bids.");
         }
     }
 
@@ -187,6 +208,10 @@ public class Auction {
         floatingItem = null;
     }
 
+    public void setEndTime(long endTime) {
+        this.endTime = endTime;
+    }
+
     public Location getChestLocation() {
         return chestLocation;
     }
@@ -217,6 +242,10 @@ public class Auction {
 
     public UUID getHighestBidder() {
         return highestBidder;
+    }
+
+    public UUID getCreator() {
+        return creator;
     }
 
     public void setCurrentPrice(double currentPrice) {
