@@ -5,13 +5,11 @@ import org.bukkit.inventory.ItemStack;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 public class PendingItemsManager {
     private final AfroAuction plugin;
-    private final Map<UUID, ItemStack> pendingItems;
+    private final Map<UUID, ItemStack[]> pendingItems;
 
     public PendingItemsManager(AfroAuction plugin) {
         this.plugin = plugin;
@@ -19,12 +17,31 @@ public class PendingItemsManager {
     }
 
     public void addPendingItem(UUID playerUUID, ItemStack item) {
-        pendingItems.put(playerUUID, item.clone());
+        ItemStack[] currentItems = pendingItems.getOrDefault(playerUUID, new ItemStack[0]);
+        ItemStack[] newItems = new ItemStack[currentItems.length + 1];
+        System.arraycopy(currentItems, 0, newItems, 0, currentItems.length);
+        newItems[currentItems.length] = item;
+        pendingItems.put(playerUUID, newItems);
         savePendingItems();
     }
 
-    public ItemStack getPendingItem(UUID playerUUID) {
-        return pendingItems.get(playerUUID);
+    public void removePendingItem(UUID playerUUID, ItemStack itemToRemove) {
+        ItemStack[] currentItems = pendingItems.getOrDefault(playerUUID, new ItemStack[0]);
+        if (currentItems.length == 0) return;
+
+        List<ItemStack> updatedItems = new ArrayList<>();
+        for (ItemStack item : currentItems) {
+            if (item != null && !item.equals(itemToRemove)) {
+                updatedItems.add(item);
+            }
+        }
+
+        if (updatedItems.isEmpty()) {
+            pendingItems.remove(playerUUID);
+        } else {
+            pendingItems.put(playerUUID, updatedItems.toArray(new ItemStack[0]));
+        }
+        savePendingItems();
     }
 
     public void removePendingItem(UUID playerUUID) {
@@ -32,40 +49,48 @@ public class PendingItemsManager {
         savePendingItems();
     }
 
+    public ItemStack[] getPendingItems(UUID playerUUID) {
+        return pendingItems.getOrDefault(playerUUID, new ItemStack[0]);
+    }
+
+    public Map<UUID, ItemStack[]> getPendingItemsMap() {
+        return pendingItems;
+    }
+
     public void savePendingItems() {
-        File file = new File(plugin.getDataFolder(), "pending.yml");
+        File file = new File(plugin.getDataFolder(), "pending-items.yml");
         YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
 
-        config.set("pending", null);
-        for (Map.Entry<UUID, ItemStack> entry : pendingItems.entrySet()) {
-            config.set("pending." + entry.getKey().toString(), entry.getValue());
+        config.set("pending-items", null);
+        for (Map.Entry<UUID, ItemStack[]> entry : pendingItems.entrySet()) {
+            config.set("pending-items." + entry.getKey().toString(), entry.getValue());
         }
 
         try {
             config.save(file);
         } catch (IOException e) {
-            plugin.getLogger().severe("Could not save pending.yml: " + e.getMessage());
+            plugin.getLogger().severe("Could not save pending-items.yml: " + e.getMessage());
         }
     }
 
     public void loadPendingItems() {
-        File file = new File(plugin.getDataFolder(), "pending.yml");
+        File file = new File(plugin.getDataFolder(), "pending-items.yml");
         if (!file.exists()) {
             return;
         }
 
         YamlConfiguration config = YamlConfiguration.loadConfiguration(file);
-        if (!config.contains("pending")) {
+        if (!config.contains("pending-items")) {
             return;
         }
 
-        for (String key : config.getConfigurationSection("pending").getKeys(false)) {
+        for (String key : config.getConfigurationSection("pending-items").getKeys(false)) {
             try {
                 UUID playerUUID = UUID.fromString(key);
-                ItemStack item = config.getItemStack("pending." + key);
-                pendingItems.put(playerUUID, item);
+                ItemStack[] items = config.getList("pending-items." + key).toArray(new ItemStack[0]);
+                pendingItems.put(playerUUID, items);
             } catch (Exception e) {
-                plugin.getLogger().warning("Failed to load pending item for " + key + ": " + e.getMessage());
+                plugin.getLogger().warning("Failed to load pending items for " + key + ": " + e.getMessage());
             }
         }
     }
