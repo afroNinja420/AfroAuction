@@ -128,25 +128,50 @@ public class AuctionCommand implements CommandExecutor {
         Pattern pattern = Pattern.compile("(?i)(\\d+d)?(\\d+h)?(\\d+m)?(\\d+s)?");
         Matcher matcher = pattern.matcher(durationStr);
         if (!matcher.matches()) {
+            plugin.getLogger().info("Duration parse failed: " + durationStr + " does not match pattern");
             throw new IllegalArgumentException("Invalid duration format");
         }
 
         long duration = 0;
-        for (String part : durationStr.toLowerCase().split("(?<=\\d)(?=\\w)")) {
-            if (part.endsWith("d")) {
-                duration += Long.parseLong(part.replace("d", "")) * 24 * 3600;
-            } else if (part.endsWith("h")) {
-                duration += Long.parseLong(part.replace("h", "")) * 3600;
-            } else if (part.endsWith("m")) {
-                duration += Long.parseLong(part.replace("m", "")) * 60;
-            } else if (part.endsWith("s")) {
-                duration += Long.parseLong(part.replace("s", ""));
+        String lowercaseDuration = durationStr.toLowerCase();
+        if (lowercaseDuration.contains("d")) {
+            Pattern dayPattern = Pattern.compile("(\\d+)d");
+            Matcher dayMatcher = dayPattern.matcher(lowercaseDuration);
+            if (dayMatcher.find()) {
+                duration += Long.parseLong(dayMatcher.group(1)) * 24 * 3600;
+                plugin.getLogger().info("Parsed days: " + dayMatcher.group(1));
+            }
+        }
+        if (lowercaseDuration.contains("h")) {
+            Pattern hourPattern = Pattern.compile("(\\d+)h");
+            Matcher hourMatcher = hourPattern.matcher(lowercaseDuration);
+            if (hourMatcher.find()) {
+                duration += Long.parseLong(hourMatcher.group(1)) * 3600;
+                plugin.getLogger().info("Parsed hours: " + hourMatcher.group(1));
+            }
+        }
+        if (lowercaseDuration.contains("m")) {
+            Pattern minutePattern = Pattern.compile("(\\d+)m");
+            Matcher minuteMatcher = minutePattern.matcher(lowercaseDuration);
+            if (minuteMatcher.find()) {
+                duration += Long.parseLong(minuteMatcher.group(1)) * 60;
+                plugin.getLogger().info("Parsed minutes: " + minuteMatcher.group(1));
+            }
+        }
+        if (lowercaseDuration.contains("s")) {
+            Pattern secondPattern = Pattern.compile("(\\d+)s");
+            Matcher secondMatcher = secondPattern.matcher(lowercaseDuration);
+            if (secondMatcher.find()) {
+                duration += Long.parseLong(secondMatcher.group(1));
+                plugin.getLogger().info("Parsed seconds: " + secondMatcher.group(1));
             }
         }
 
         if (duration == 0) {
+            plugin.getLogger().info("Duration parse failed: Total duration is 0 for input " + durationStr);
             throw new IllegalArgumentException("Duration must be greater than 0");
         }
+        plugin.getLogger().info("Successfully parsed duration: " + durationStr + " to " + duration + " seconds");
         return duration;
     }
 
