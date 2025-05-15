@@ -32,7 +32,7 @@ public class AfroAuction extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new AuctionListener(this, auctionManager), this);
         getServer().getPluginManager().registerEvents(new PendingItemsListener(this), this);
 
-        AuctionCommand auctionCommand = new AuctionCommand(this, auctionManager);
+        PlayerAuctionCommand auctionCommand = new PlayerAuctionCommand(this, auctionManager, notificationManager);
         getCommand("pa").setExecutor(auctionCommand);
         getCommand("pa").setTabCompleter(auctionCommand);
 
