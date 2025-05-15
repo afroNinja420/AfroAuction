@@ -12,6 +12,7 @@ public class AfroAuction extends JavaPlugin {
     private Economy economy;
     private AuctionManager auctionManager;
     private PendingItemsManager pendingItemsManager;
+    private NotificationManager notificationManager;
     private FileConfiguration config;
 
     @Override
@@ -29,10 +30,10 @@ public class AfroAuction extends JavaPlugin {
         // Initialize managers
         auctionManager = new AuctionManager(this);
         pendingItemsManager = new PendingItemsManager(this);
+        notificationManager = new NotificationManager(this);
 
         // Register commands
-        getCommand("createauction").setExecutor(new AuctionCommand(this, auctionManager));
-        getCommand("auctionclaim").setExecutor(new AuctionClaimCommand(this, pendingItemsManager));
+        getCommand("playerauction").setExecutor(new PlayerAuctionCommand(this, auctionManager, pendingItemsManager, notificationManager));
 
         // Register listeners
         getServer().getPluginManager().registerEvents(new AuctionListener(this, auctionManager), this);
@@ -41,6 +42,7 @@ public class AfroAuction extends JavaPlugin {
         // Load data
         auctionManager.loadAuctions();
         pendingItemsManager.loadPendingItems();
+        notificationManager.loadNotificationSettings();
 
         getLogger().info("AfroAuction enabled successfully!");
     }
@@ -52,6 +54,9 @@ public class AfroAuction extends JavaPlugin {
         }
         if (pendingItemsManager != null) {
             pendingItemsManager.savePendingItems();
+        }
+        if (notificationManager != null) {
+            notificationManager.saveNotificationSettings();
         }
         getLogger().info("AfroAuction disabled!");
     }
@@ -135,6 +140,10 @@ public class AfroAuction extends JavaPlugin {
 
     public PendingItemsManager getPendingItemsManager() {
         return pendingItemsManager;
+    }
+
+    public NotificationManager getNotificationManager() {
+        return notificationManager;
     }
 
     @Override

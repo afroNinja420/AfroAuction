@@ -2,19 +2,28 @@ package me.afroninja.afroauction;
 
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.block.Chest;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 public class AuctionCommand implements CommandExecutor {
     private final AfroAuction plugin;
     private final AuctionManager auctionManager;
+    private final Map<UUID, Long> cooldowns;
 
     public AuctionCommand(AfroAuction plugin, AuctionManager auctionManager) {
         this.plugin = plugin;
         this.auctionManager = auctionManager;
+        this.cooldowns = new HashMap<>();
     }
 
     @Override
@@ -25,129 +34,122 @@ public class AuctionCommand implements CommandExecutor {
         }
 
         Player player = (Player) sender;
-        if (!player.hasPermission("afroauction.create")) {
-            sender.sendMessage(plugin.getMessage("no-permission", "%action%", "create auctions"));
+
+        if (args.length != 2) {
+            player.sendMessage(plugin.getMessage("invalid-usage"));
             return true;
         }
 
-        if (args.length < 2) {
-            sender.sendMessage(plugin.getMessage("invalid-usage"));
+        // Check cooldown
+        long cooldownTime = plugin.getConfig().getLong("auction-cooldown", 60);
+        long currentTime = System.currentTimeMillis() / 1000;
+        UUID playerUUID = player.getUniqueId();
+        if (cooldowns.containsKey(playerUUID)) {
+            long lastUsed = cooldowns.get(playerUUID);
+            if (currentTime - lastUsed < cooldownTime) {
+                player.sendMessage(plugin.getMessage("cooldown", "%cooldown%", String.valueOf(cooldownTime - (currentTime - lastUsed))));
+                return true;
+            }
+        }
+
+        // Check active auctions limit
+        int maxAuctions = plugin.getConfig().getInt("max-active-auctions", 5);
+        long activeAuctions = auctionManager.getAuctions().stream()
+                .filter(auction -> auction.getCreator().equals(playerUUID))
+                .count();
+        if (activeAuctions >= maxAuctions) {
+            player.sendMessage(plugin.getMessage("max-auctions", "%max_auctions%", String.valueOf(maxAuctions)));
             return true;
         }
 
-        double price;
+        // Parse starting price
+        double startPrice;
         try {
-            price = Double.parseDouble(args[0]);
+            startPrice = Double.parseDouble(args[0]);
         } catch (NumberFormatException e) {
-            sender.sendMessage(plugin.getMessage("invalid-price-format"));
+            player.sendMessage(plugin.getMessage("invalid-price-format"));
             return true;
         }
 
         double minPrice = plugin.getConfig().getDouble("min-start-price", 1.0);
         double maxPrice = plugin.getConfig().getDouble("max-start-price", 1000000.0);
-        if (price < minPrice || price > maxPrice) {
-            sender.sendMessage(plugin.getMessage("invalid-price", "%min_price%", String.format("%.2f", minPrice), "%max_price%", String.format("%.2f", maxPrice)));
+        if (startPrice < minPrice || startPrice > maxPrice) {
+            player.sendMessage(plugin.getMessage("invalid-price", "%min_price%", String.format("%.2f", minPrice), "%max_price%", String.format("%.2f", maxPrice)));
             return true;
         }
 
+        // Parse duration
         long duration;
         try {
             duration = parseDuration(args[1]);
         } catch (IllegalArgumentException e) {
-            sender.sendMessage(plugin.getMessage("invalid-duration-format"));
+            player.sendMessage(plugin.getMessage("invalid-duration-format"));
             return true;
         }
 
         long minDuration = plugin.getConfig().getLong("min-auction-duration", 30);
         long maxDuration = plugin.getConfig().getLong("max-auction-duration", 86400);
         if (duration < minDuration || duration > maxDuration) {
-            String minDurationStr = formatDuration(minDuration);
-            String maxDurationStr = formatDuration(maxDuration);
-            sender.sendMessage(plugin.getMessage("invalid-duration", "%min_duration%", minDurationStr, "%max_duration%", maxDurationStr));
+            player.sendMessage(plugin.getMessage("invalid-duration", "%min_duration%", String.valueOf(minDuration), "%max_duration%", String.valueOf(maxDuration)));
             return true;
         }
 
+        // Check item in hand
         ItemStack item = player.getInventory().getItemInMainHand();
         if (item == null || item.getType() == Material.AIR) {
-            sender.sendMessage(plugin.getMessage("no-item"));
+            player.sendMessage(plugin.getMessage("no-item"));
             return true;
         }
 
-        Block targetBlock = player.getTargetBlock(null, 5);
-        if (targetBlock == null || (targetBlock.getType() != Material.CHEST && targetBlock.getType() != Material.TRAPPED_CHEST)) {
-            sender.sendMessage(plugin.getMessage("not-chest"));
+        // Check if looking at a chest
+        Block block = player.getTargetBlock(null, 5);
+        if (block == null || !(block.getState() instanceof Chest)) {
+            player.sendMessage(plugin.getMessage("not-chest"));
             return true;
         }
 
-        if (auctionManager.getAuction(targetBlock.getLocation()) != null) {
-            sender.sendMessage(plugin.getMessage("chest-in-use"));
+        Chest chest = (Chest) block.getState();
+        if (auctionManager.isChestInUse(chest.getLocation())) {
+            player.sendMessage(plugin.getMessage("chest-in-use"));
             return true;
         }
 
-        long cooldown = plugin.getConfig().getLong("auction-cooldown", 60) * 1000;
-        long lastAuctionTime = auctionManager.getLastAuctionTime(player.getUniqueId());
-        if (System.currentTimeMillis() - lastAuctionTime < cooldown) {
-            long remaining = (cooldown - (System.currentTimeMillis() - lastAuctionTime)) / 1000;
-            sender.sendMessage(plugin.getMessage("cooldown", "%cooldown%", String.valueOf(remaining)));
-            return true;
-        }
-
-        int maxAuctions = plugin.getConfig().getInt("max-active-auctions", 5);
-        if (auctionManager.getActiveAuctions(player.getUniqueId()).size() >= maxAuctions) {
-            sender.sendMessage(plugin.getMessage("max-auctions", "%max_auctions%", String.valueOf(maxAuctions)));
-            return true;
-        }
-
-        ItemStack auctionItem = item.clone();
-        auctionItem.setAmount(1);
-        player.getInventory().removeItem(auctionItem);
-
-        Auction auction = new Auction(plugin, player.getUniqueId(), auctionItem, targetBlock.getLocation(), price, duration);
+        // Create auction
+        player.getInventory().setItemInMainHand(null);
+        Auction auction = new Auction(plugin, playerUUID, item, chest.getLocation(), startPrice, duration);
         auctionManager.addAuction(auction);
 
-        String itemName = auctionItem.getItemMeta().hasDisplayName() ? auctionItem.getItemMeta().getDisplayName() : auctionItem.getType().name();
-        String durationStr = formatDuration(duration);
-        sender.sendMessage(plugin.getMessage("auction-created", "%item%", itemName, "%price%", String.format("%.2f", price), "%duration%", durationStr));
+        String itemName = item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : item.getType().name();
+        player.sendMessage(plugin.getMessage("auction-created", "%item%", itemName, "%price%", String.format("%.2f", startPrice), "%duration%", formatDuration(duration)));
+        cooldowns.put(playerUUID, currentTime);
+
         return true;
     }
 
-    private long parseDuration(String input) {
-        long totalSeconds = 0;
-        StringBuilder number = new StringBuilder();
-        for (char c : input.toLowerCase().toCharArray()) {
-            if (Character.isDigit(c)) {
-                number.append(c);
-            } else {
-                if (number.length() == 0) {
-                    throw new IllegalArgumentException("Invalid duration format");
-                }
-                long value = Long.parseLong(number.toString());
-                switch (c) {
-                    case 'd':
-                        totalSeconds += value * 24 * 3600;
-                        break;
-                    case 'h':
-                        totalSeconds += value * 3600;
-                        break;
-                    case 'm':
-                        totalSeconds += value * 60;
-                        break;
-                    case 's':
-                        totalSeconds += value;
-                        break;
-                    default:
-                        throw new IllegalArgumentException("Invalid duration unit: " + c);
-                }
-                number = new StringBuilder();
+    private long parseDuration(String durationStr) {
+        Pattern pattern = Pattern.compile("(?i)(\\d+d)?(\\d+h)?(\\d+m)?(\\d+s)?");
+        Matcher matcher = pattern.matcher(durationStr);
+        if (!matcher.matches()) {
+            throw new IllegalArgumentException("Invalid duration format");
+        }
+
+        long duration = 0;
+        for (String part : durationStr.toLowerCase().split("(?<=\\d)(?=\\w)")) {
+            if (part.endsWith("d")) {
+                duration += Long.parseLong(part.replace("d", "")) * 24 * 3600;
+            } else if (part.endsWith("h")) {
+                duration += Long.parseLong(part.replace("h", "")) * 3600;
+            } else if (part.endsWith("m")) {
+                duration += Long.parseLong(part.replace("m", "")) * 60;
+            } else if (part.endsWith("s")) {
+                duration += Long.parseLong(part.replace("s", ""));
             }
         }
-        if (number.length() > 0) {
-            throw new IllegalArgumentException("Incomplete duration format");
-        }
-        if (totalSeconds == 0) {
+
+        if (duration == 0) {
             throw new IllegalArgumentException("Duration must be greater than 0");
         }
-        return totalSeconds;
+        return duration;
     }
 
     private String formatDuration(long seconds) {

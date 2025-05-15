@@ -133,7 +133,7 @@ public class Auction {
 
         if (highestBidder != null) {
             Player previousBidder = plugin.getServer().getPlayer(highestBidder);
-            if (previousBidder != null) {
+            if (previousBidder != null && plugin.getNotificationManager().hasNotificationsEnabled(highestBidder)) {
                 String itemName = item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : plugin.formatItemName(item.getType().name());
                 previousBidder.sendMessage(plugin.getMessage("outbid", "%item%", itemName));
                 plugin.getEconomy().depositPlayer(previousBidder, currentBid);

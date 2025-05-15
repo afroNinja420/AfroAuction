@@ -4,18 +4,7 @@ main: me.afroninja.afroauction.AfroAuction
 api-version: 1.20
 depend: [Vault]
 commands:
-  createauction:
-    description: Create a new auction
-    usage: /<command> <startPrice> <duration>
-    permission: afroauction.create
-  auctionclaim:
-    description: Claim pending auction items
-    usage: /<command>
-    permission: afroauction.claim
-permissions:
-  afroauction.create:
-    description: Allows creating auctions
-    default: true
-  afroauction.claim:
-    description: Allows claiming pending items
-    default: true
+  playerauction:
+    description: Main command for AfroAuction plugin
+    usage: /<command> <subcommand> [args]
+    aliases: [pa]
