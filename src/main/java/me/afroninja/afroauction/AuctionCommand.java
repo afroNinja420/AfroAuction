@@ -54,9 +54,7 @@ public class AuctionCommand implements CommandExecutor {
 
         // Check active auctions limit
         int maxAuctions = plugin.getConfig().getInt("max-active-auctions", 5);
-        long activeAuctions = auctionManager.getAuctions().stream()
-                .filter(auction -> auction.getCreator().equals(playerUUID))
-                .count();
+        long activeAuctions = auctionManager.getActiveAuctionsCount(playerUUID);
         if (activeAuctions >= maxAuctions) {
             player.sendMessage(plugin.getMessage("max-auctions", "%max_auctions%", String.valueOf(maxAuctions)));
             return true;
@@ -119,7 +117,7 @@ public class AuctionCommand implements CommandExecutor {
         Auction auction = new Auction(plugin, playerUUID, item, chest.getLocation(), startPrice, duration);
         auctionManager.addAuction(auction);
 
-        String itemName = item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : item.getType().name();
+        String itemName = item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : plugin.formatItemName(item.getType().name());
         player.sendMessage(plugin.getMessage("auction-created", "%item%", itemName, "%price%", String.format("%.2f", startPrice), "%duration%", formatDuration(duration)));
         cooldowns.put(playerUUID, currentTime);
 
