@@ -7,6 +7,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
@@ -35,23 +36,70 @@ public class AuctionListener implements Listener {
         openAuctionGUI(event.getPlayer(), auction);
     }
 
+    @EventHandler
+    public void onInventoryClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player)) return;
+        Player player = (Player) event.getWhoClicked();
+        Inventory inventory = event.getInventory();
+
+        if (!event.getView().getTitle().startsWith(plugin.getMessage("gui-title", "%item%", ""))) return;
+
+        event.setCancelled(true); // Prevent all item movement
+
+        if (event.getRawSlot() == 15) { // Bid button slot
+            ItemStack item = inventory.getItem(15);
+            if (item != null && item.getType() == org.bukkit.Material.EMERALD) {
+                ItemMeta meta = item.getItemMeta();
+                if (meta != null && meta.hasLore()) {
+                    String lore = meta.getLore().get(0);
+                    String bidAmountStr = lore.replace("§7Click to bid $", "").trim();
+                    try {
+                        double bidAmount = Double.parseDouble(bidAmountStr);
+                        player.chat("/bid " + bidAmount); // Simulate chat command
+                    } catch (NumberFormatException e) {
+                        player.sendMessage("§cInvalid bid amount!");
+                    }
+                }
+            }
+        }
+    }
+
     private void openAuctionGUI(Player player, Auction auction) {
-        Inventory gui = Bukkit.createInventory(null, 9, plugin.getMessage("gui-title", "%item%", getItemName(auction.getItem())));
+        Inventory gui = Bukkit.createInventory(null, 27, plugin.getMessage("gui-title", "%item%", getItemName(auction.getItem())));
+
+        // Slot 11: Auction Info
+        double startingBid = auction.getStartingBid();
         double currentBid = auction.getCurrentBid();
         long timeRemaining = (auction.getEndTime() - System.currentTimeMillis()) / 1000;
+        int bidCount = auction.getBidCount();
+        String highestBidder = auction.getHighestBidder() != null
+                ? plugin.getServer().getOfflinePlayer(auction.getHighestBidder()).getName()
+                : "None";
+        String highestBid = auction.getHighestBidder() != null
+                ? String.format("%.2f", currentBid)
+                : "None";
 
-        // Add info items
-        gui.setItem(2, createInfoItem("§e" + plugin.getMessage("gui-info-title"), "§a" + plugin.getMessage("gui-bid-label", "%bid%", String.format("%.2f", currentBid))));
-        gui.setItem(4, createInfoItem("§e" + plugin.getMessage("gui-info-title"), "§a" + plugin.getMessage("gui-time-label", "%time%", formatTime(timeRemaining))));
+        gui.setItem(11, createInfoItem(
+                "§e" + plugin.getMessage("gui-info-title"),
+                "§7Starting/Current Bid: §a$" + String.format("%.2f", startingBid) + " / $" + String.format("%.2f", currentBid),
+                "§7Time Left: §a" + formatTime(timeRemaining),
+                "§7Number of Bids: §a" + bidCount,
+                "§7Highest Bidder: §a" + highestBidder,
+                "§7Highest Bid: §a$" + highestBid
+        ));
 
-        // Add bid buttons
+        // Slot 13: Item being sold
+        gui.setItem(13, auction.getItem());
+
+        // Slot 15: Place Bid button
         double bidIncrement = plugin.getConfig().getDouble("min-bid-increment", 1.0);
-        gui.setItem(6, createBidButton("§a" + plugin.getMessage("gui-bid-button", "%amount%", String.format("%.2f", currentBid + bidIncrement)), currentBid + bidIncrement));
+        double nextBid = currentBid + bidIncrement;
+        gui.setItem(15, createBidButton("§a" + plugin.getMessage("gui-bid-button", "%amount%", String.format("%.2f", nextBid)), nextBid));
 
         player.openInventory(gui);
     }
 
-    private ItemStack createInfoItem(String name, String lore) {
+    private ItemStack createInfoItem(String name, String... lore) {
         ItemStack item = new ItemStack(org.bukkit.Material.PAPER);
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(name);
@@ -75,8 +123,18 @@ public class AuctionListener implements Listener {
 
     private String formatTime(long seconds) {
         if (seconds <= 0) return "0s";
+        long days = seconds / (24 * 3600);
+        seconds %= (24 * 3600);
+        long hours = seconds / 3600;
+        seconds %= 3600;
         long minutes = seconds / 60;
         seconds %= 60;
-        return (minutes > 0 ? minutes + "m " : "") + seconds + "s";
+
+        StringBuilder sb = new StringBuilder();
+        if (days > 0) sb.append(days).append("d ");
+        if (hours > 0) sb.append(hours).append("h ");
+        if (minutes > 0) sb.append(minutes).append("m ");
+        sb.append(seconds).append("s");
+        return sb.toString().trim();
     }
 }

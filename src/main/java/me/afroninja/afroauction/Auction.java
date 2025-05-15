@@ -19,8 +19,10 @@ public class Auction {
     private final UUID creator;
     private final ItemStack item;
     private final Location chestLocation;
+    private double startingBid;
     private double currentBid;
     private UUID highestBidder;
+    private int bidCount;
     private final long endTime;
     private final List<Entity> hologramEntities;
     private final BukkitRunnable updateTask;
@@ -30,8 +32,10 @@ public class Auction {
         this.creator = creator;
         this.item = item.clone();
         this.chestLocation = chestLocation;
+        this.startingBid = startingBid;
         this.currentBid = startingBid;
         this.highestBidder = null;
+        this.bidCount = 0;
         this.endTime = System.currentTimeMillis() + (duration * 1000);
         this.hologramEntities = new ArrayList<>();
 
@@ -143,6 +147,7 @@ public class Auction {
         plugin.getEconomy().withdrawPlayer(player, bid);
         currentBid = bid;
         highestBidder = player.getUniqueId();
+        bidCount++; // Increment bid count
 
         String itemName = item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : plugin.formatItemName(item.getType().name());
         player.sendMessage(plugin.getMessage("bid-placed", "%bid%", String.format("%.2f", bid), "%item%", itemName));
@@ -206,12 +211,20 @@ public class Auction {
         return chestLocation;
     }
 
+    public double getStartingBid() {
+        return startingBid;
+    }
+
     public double getCurrentBid() {
         return currentBid;
     }
 
     public UUID getHighestBidder() {
         return highestBidder;
+    }
+
+    public int getBidCount() {
+        return bidCount;
     }
 
     public long getEndTime() {
