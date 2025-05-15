@@ -3,8 +3,14 @@ version: 1.0-SNAPSHOT
 main: me.afroninja.afroauction.AfroAuction
 api-version: 1.20
 depend: [Vault]
+
 commands:
-  playerauction:
-    description: Main command for AfroAuction plugin
-    usage: /<command> <subcommand> [args]
-    aliases: [pa]
+  pa:
+    description: Manage auctions (create, bid)
+    usage: /<command> <create|bid> [args]
+    permission: afroauction.use
+
+permissions:
+  afroauction.use:
+    description: Allows using auction commands
+    default: true

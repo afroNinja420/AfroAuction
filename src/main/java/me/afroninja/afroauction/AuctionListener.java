@@ -49,17 +49,8 @@ public class AuctionListener implements Listener {
         if (event.getRawSlot() == 15) { // Bid button slot
             ItemStack item = inventory.getItem(15);
             if (item != null && item.getType() == org.bukkit.Material.EMERALD) {
-                ItemMeta meta = item.getItemMeta();
-                if (meta != null && meta.hasLore()) {
-                    String lore = meta.getLore().get(0);
-                    String bidAmountStr = lore.replace("§7Click to bid $", "").trim();
-                    try {
-                        double bidAmount = Double.parseDouble(bidAmountStr);
-                        player.chat("/bid " + bidAmount); // Simulate chat command
-                    } catch (NumberFormatException e) {
-                        player.sendMessage("§cInvalid bid amount!");
-                    }
-                }
+                player.closeInventory();
+                player.sendMessage("§aPlease enter your bid amount in chat: /pa bid <amount>");
             }
         }
     }
