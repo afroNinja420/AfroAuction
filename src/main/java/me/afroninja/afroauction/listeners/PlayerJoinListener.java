@@ -9,15 +9,27 @@ import org.bukkit.inventory.ItemStack;
 
 import java.util.UUID;
 
+/**
+ * Listens for player join events to deliver pending items.
+ */
 public class PlayerJoinListener implements Listener {
     private final AfroAuction plugin;
     private final PendingItemsManager pendingItemsManager;
 
+    /**
+     * Constructs a new PlayerJoinListener instance.
+     * @param plugin the AfroAuction plugin instance
+     * @param pendingItemsManager the PendingItemsManager instance
+     */
     public PlayerJoinListener(AfroAuction plugin, PendingItemsManager pendingItemsManager) {
         this.plugin = plugin;
         this.pendingItemsManager = pendingItemsManager;
     }
 
+    /**
+     * Handles the player join event to deliver pending items.
+     * @param event the PlayerJoinEvent
+     */
     @EventHandler
     public void onPlayerJoin(PlayerJoinEvent event) {
         UUID playerUUID = event.getPlayer().getUniqueId();
@@ -27,9 +39,10 @@ public class PlayerJoinListener implements Listener {
             if (event.getPlayer().getInventory().firstEmpty() != -1) {
                 event.getPlayer().getInventory().addItem(item);
                 pendingItemsManager.removePendingItem(playerUUID, item);
-                event.getPlayer().sendMessage("§aYou have received a pending item: " + (item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : plugin.formatItemName(item.getType().name())) + "!");
+                String itemName = item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : plugin.formatItemName(item.getType().name());
+                event.getPlayer().sendMessage(plugin.getMessage("pending-item-received", "%item%", itemName));
             } else {
-                event.getPlayer().sendMessage("§cYou have a pending item, but your inventory is full! Use /pa claim when you have space.");
+                event.getPlayer().sendMessage(plugin.getMessage("inventory-full"));
             }
         }
     }

@@ -1,84 +1,39 @@
-# AfroAuction Configuration
-
-# Minimum starting price for auctions
-min-start-price: 1.0
-
-# Maximum starting price for auctions
-max-start-price: 1000000.0
-
-# Minimum auction duration (in seconds)
-min-auction-duration: 30
-
-# Maximum auction duration (in seconds)
-max-auction-duration: 86400
-
-# Cooldown between auction creations (in seconds)
 auction-cooldown: 60
-
-# Maximum number of active auctions per player
 max-active-auctions: 5
-
-# Minimum bid increment
+min-start-price: 1.0
+max-start-price: 1000000.0
+min-auction-duration: 30
+max-auction-duration: 86400
 min-bid-increment: 1.0
 
-# Whether to allow self-bidding
-allow-self-bidding: false
-
-# Whether to broadcast auction end messages
-broadcast-auction-end: true
-
-# Sound played when a bid is placed
-bid-sound: ENTITY_EXPERIENCE_ORB_PICKUP
-
-# Hologram settings
-hologram-base-height: 1.7
-hologram-line-spacing: 0.25
-hologram-item-offset: 0.25
-hologram-update-interval: 20
-
-# Default color for item names without custom color (e.g., &b for aqua)
-default-item-color: "&b"
-
 messages:
-  player-only: "&cOnly players can use this command!"
-  no-permission: "&cYou do not have permission to %action%!"
-  invalid-usage: "&cUsage: /pa <subcommand> [args]"
-  invalid-price-format: "&cStart price must be a valid number!"
-  invalid-duration-format: "&cDuration must be in format like 1d6h30m45s (days, hours, minutes, seconds)!"
-  invalid-price: "&cStart price must be between $%min_price% and $%max_price%!"
-  invalid-duration: "&cDuration must be between %min_duration% and %max_duration%!"
-  no-item: "&cYou must hold an item in your hand!"
-  not-chest: "&cYou must be looking at a chest!"
-  chest-in-use: "&cThis chest is already used for an auction!"
+  player-only: "&cThis command can only be used by players!"
+  invalid-usage: "&cInvalid usage! Use /pa <create|bid|notifications|claim> [args]"
   cooldown: "&cYou must wait %cooldown% seconds before creating another auction!"
   max-auctions: "&cYou have reached the maximum number of active auctions (%max_auctions%)!"
-  auction-created: "&aAuction created for %item%&r&a at $%price% for %duration%!"
-  bid-too-low: "&cYour bid is too low! Minimum bid is $%min_bid%!"
-  insufficient-funds: "&cYou do not have enough money to bid $%bid%!"
-  self-bid-disallowed: "&cYou cannot bid on your own auction!"
-  outbid: "&cYou have been outbid on %item%&r&c!"
-  bid-placed: "&aBid of $%bid% placed on %item%&r&a!"
-  auction-ended: "&aAuction for %item%&r&a ended! Winner: %winner% for $%price%!"
-  winner-received: "&aYou received %item%&r&a!"
-  winner-inventory-full: "&cYour inventory is full! %item%&r&c has been queued. Use /pa claim to retrieve it."
-  creator-paid: "&aYour auction for %item%&r&a sold to %winner% for $%price%!"
-  no-bids: "&cYour auction for %item%&r&c ended with no bids. Use /pa claim to retrieve it."
-  hologram-bid-starting: "&aStarting Bid: $%price%"
-  hologram-bid-highest: "&aHighest Bid: $%price%"
-  hologram-time: "&aTime: %time%"
-  hologram-item: "&e%item%"
-  claim-no-items: "&cYou have no items to claim!"
-  claim-success: "&aYou claimed %item%&r&a!"
-  claim-no-space: "&cYour inventory has no space for all items. Some remain queued."
-  gui-title: "&aAuction: %item%&r&a"
-  gui-info-title: "&eAuction Info"
-  gui-bid-label: "&aCurrent Bid: $%bid%"
-  gui-time-label: "&aTime Left: %time%"
-  gui-bid-button: "&aBid $%amount%"
-  notify-enabled: "&aOutbid notifications enabled!"
-  notify-disabled: "&cOutbid notifications disabled!"
-  help-header: "&e===== AfroAuction Commands ====="
-  help-create: "&a/pa create <startPrice> <duration> &7- Create an auction for the item in your hand."
-  help-claim: "&a/pa claim &7- Claim items from ended auctions."
-  help-notify: "&a/pa notify &7- Toggle outbid notifications."
-  help-help: "&a/pa help &7- Show this help menu."
+  invalid-price-format: "&cInvalid price format! Please enter a valid number."
+  invalid-price: "&cPrice must be between %min_price% and %max_price%!"
+  invalid-duration-format: "&cInvalid duration format! Use a format like 1d2h3m4s."
+  invalid-duration: "&cDuration must be between %min_duration% and %max_duration% seconds!"
+  no-item: "&cYou must be holding an item to create an auction!"
+  not-chest: "&cYou must be looking at a chest to create an auction!"
+  chest-in-use: "&cThis chest is already in use by another auction!"
+  auction-created: "&aAuction created for %item% with a starting price of %price% for %duration%!"
+  bid-too-low: "&cYour bid must be higher than the current highest bid of %current_bid%!"
+  bid-increment-too-low: "&cYour bid must be at least %min_increment% higher than the current bid!"
+  insufficient-funds: "&cYou don't have enough money to place this bid!"
+  bid-placed: "&aYou have placed a bid of %amount% on %item%!"
+  auction-ended: "&cThis auction has already ended!"
+  auction-no-bids: "&eYour auction for %item% ended with no bids. The item has been added to your pending items."
+  auction-won: "&aYou won the auction for %item% for %amount%!"
+  auction-sold: "&aYour auction for %item% sold for %amount%!"
+  outbid: "&eYou have been outbid on %item%!"
+  no-pending-items: "&cYou have no pending items to claim!"
+  claim-success: "&aSuccessfully claimed %item%!"
+  inventory-full: "&cYour inventory is full! Please make space to claim your item."
+  pending-item-received: "&aYou have received a pending item: %item%!"
+  notifications-toggled: "&aNotifications %state%!"
+  invalid-bid-format: "&cInvalid bid format! Use !bid <amount>"
+  no-auction-target: "&cNo auction found at your target location!"
+  gui-bid-item: "&eBid: %amount%"
+  gui-time-left: "&eTime Left: %time%"

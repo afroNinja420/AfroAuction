@@ -1,8 +1,6 @@
 package me.afroninja.afroauction;
 
-import me.afroninja.afroauction.managers.AuctionManager;
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -11,94 +9,71 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
-import java.util.Arrays;
-
+/**
+ * Manages the graphical user interface for auctions, allowing players to view and bid on auctions.
+ */
 public class AuctionGUI implements Listener {
     private final AfroAuction plugin;
-    private final AuctionManager auctionManager;
     private final Auction auction;
-    private final Player player;
-    private final Inventory inventory;
+    private Inventory inventory;
 
-    public AuctionGUI(AfroAuction plugin, AuctionManager auctionManager, Auction auction, Player player) {
+    /**
+     * Constructs a new AuctionGUI instance.
+     * @param plugin the AfroAuction plugin instance
+     * @param auction the auction to display
+     */
+    public AuctionGUI(AfroAuction plugin, Auction auction) {
         this.plugin = plugin;
-        this.auctionManager = auctionManager;
         this.auction = auction;
-        this.player = player;
-        this.inventory = Bukkit.createInventory(null, 27, plugin.getMessage("gui-title", "%item%", getItemName()));
-
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
-        updateInventory();
+        setupInventory();
+        Bukkit.getPluginManager().registerEvents(this, plugin);
     }
 
-    private String getItemName() {
-        return auction.getItem().getItemMeta().hasDisplayName() ? auction.getItem().getItemMeta().getDisplayName() : auction.getItem().getType().name();
+    /**
+     * Sets up the auction inventory with items and information.
+     */
+    private void setupInventory() {
+        inventory = Bukkit.createInventory(null, 9, "Auction - " + (auction.getItem().getItemMeta().hasDisplayName() ? auction.getItem().getItemMeta().getDisplayName() : plugin.formatItemName(auction.getItem().getType().name())));
+        inventory.setItem(4, auction.getItem());
+
+        ItemStack bidItem = new ItemStack(org.bukkit.Material.GOLD_INGOT);
+        ItemMeta bidMeta = bidItem.getItemMeta();
+        bidMeta.setDisplayName(plugin.getMessage("gui-bid-item", "&eBid: %amount%", String.format("%.2f", auction.getHighestBid())));
+        bidItem.setItemMeta(bidMeta);
+        inventory.setItem(2, bidItem);
+
+        ItemStack timeItem = new ItemStack(org.bukkit.Material.CLOCK);
+        ItemMeta timeMeta = timeItem.getItemMeta();
+        long timeLeft = (auction.getEndTime() - System.currentTimeMillis()) / 1000;
+        timeMeta.setDisplayName(plugin.getMessage("gui-time-left", "&eTime Left: %time%", timeLeft + "s"));
+        timeItem.setItemMeta(timeMeta);
+        inventory.setItem(6, timeItem);
     }
 
-    private void updateInventory() {
-        inventory.clear();
-
-        // Auction item in slot 13 (center of second row)
-        ItemStack itemDisplay = auction.getItem().clone();
-        inventory.setItem(13, itemDisplay);
-
-        // Info item in slot 11 (left of auction item)
-        ItemStack infoItem = new ItemStack(Material.PAPER);
-        ItemMeta infoMeta = infoItem.getItemMeta();
-        infoMeta.setDisplayName(plugin.getMessage("gui-info-title"));
-        infoMeta.setLore(Arrays.asList(
-                plugin.getMessage("gui-bid-label", "%bid%", String.format("%.2f", auction.getCurrentBid())),
-                plugin.getMessage("gui-time-label", "%time%", formatTimeRemaining())
-        ));
-        infoItem.setItemMeta(infoMeta);
-        inventory.setItem(11, infoItem);
-
-        // Bid button in slot 15 (right of auction item)
-        ItemStack bidButton = new ItemStack(Material.EMERALD);
-        ItemMeta bidMeta = bidButton.getItemMeta();
-        double nextBid = auction.getCurrentBid() + plugin.getConfig().getDouble("min-bid-increment", 1.0);
-        bidMeta.setDisplayName(plugin.getMessage("gui-bid-button", "%amount%", String.format("%.2f", nextBid)));
-        bidButton.setItemMeta(bidMeta);
-        inventory.setItem(15, bidButton);
-    }
-
-    private String formatTimeRemaining() {
-        long remaining = (auction.getEndTime() - System.currentTimeMillis()) / 1000;
-        if (remaining <= 0) return "0s";
-
-        long days = remaining / (24 * 3600);
-        remaining %= (24 * 3600);
-        long hours = remaining / 3600;
-        remaining %= 3600;
-        long minutes = remaining / 60;
-        long seconds = remaining % 60;
-
-        StringBuilder sb = new StringBuilder();
-        if (days > 0) sb.append(days).append("d, ");
-        if (hours > 0 || days > 0) sb.append(hours).append("h, ");
-        if (minutes > 0 || hours > 0 || days > 0) sb.append(minutes).append("m, ");
-        sb.append(seconds).append("s");
-        return sb.toString();
-    }
-
-    public void open() {
+    /**
+     * Opens the auction inventory for a player.
+     * @param player the player to open the inventory for
+     */
+    public void openInventory(Player player) {
         player.openInventory(inventory);
     }
 
+    /**
+     * Handles clicks within the auction inventory.
+     * @param event the InventoryClickEvent
+     */
     @EventHandler
     public void onInventoryClick(InventoryClickEvent event) {
-        if (event.getInventory() != inventory) {
-            return;
-        }
+        if (event.getInventory().equals(inventory)) {
+            event.setCancelled(true);
+            if (event.getCurrentItem() == null || event.getCurrentItem().getType() == org.bukkit.Material.AIR) return;
 
-        event.setCancelled(true);
-        if (event.getRawSlot() != 15) {
-            return;
-        }
-
-        double nextBid = auction.getCurrentBid() + plugin.getConfig().getDouble("min-bid-increment", 1.0);
-        if (auction.placeBid(player, nextBid)) {
-            updateInventory();
+            Player player = (Player) event.getWhoClicked();
+            if (event.getSlot() == 2) { // Bid item slot
+                auction.placeBid(player, auction.getHighestBid() + plugin.getConfig().getDouble("min-bid-increment", 1.0));
+                player.closeInventory();
+                setupInventory(); // Refresh inventory
+            }
         }
     }
 }

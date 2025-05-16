@@ -1,8 +1,5 @@
 package me.afroninja.afroauction;
 
-import me.afroninja.afroauction.managers.AuctionManager;
-import me.afroninja.afroauction.managers.NotificationManager;
-import me.afroninja.afroauction.managers.PendingItemsManager;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.Chest;
@@ -21,6 +18,9 @@ import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * Handles all auction-related commands for the AfroAuction plugin, including /pa and /claim.
+ */
 public class AuctionCommand implements CommandExecutor, TabCompleter {
     private final AfroAuction plugin;
     private final AuctionManager auctionManager;
@@ -28,6 +28,13 @@ public class AuctionCommand implements CommandExecutor, TabCompleter {
     private final PendingItemsManager pendingItemsManager;
     private final Map<UUID, Long> cooldowns;
 
+    /**
+     * Constructs a new AuctionCommand instance.
+     * @param plugin the AfroAuction plugin instance
+     * @param auctionManager the AuctionManager instance
+     * @param notificationManager the NotificationManager instance
+     * @param pendingItemsManager the PendingItemsManager instance
+     */
     public AuctionCommand(AfroAuction plugin, AuctionManager auctionManager, NotificationManager notificationManager, PendingItemsManager pendingItemsManager) {
         this.plugin = plugin;
         this.auctionManager = auctionManager;
@@ -148,7 +155,7 @@ public class AuctionCommand implements CommandExecutor, TabCompleter {
             return true;
         } else if (subcommand.equals("bid")) {
             if (args.length != 2) {
-                player.sendMessage("§cUsage: /pa bid <amount>");
+                player.sendMessage(plugin.getMessage("invalid-usage"));
                 return true;
             }
 
@@ -163,13 +170,13 @@ public class AuctionCommand implements CommandExecutor, TabCompleter {
             // Find auction at the targeted chest
             Block block = player.getTargetBlock(null, 5);
             if (block == null || !(block.getState() instanceof Chest)) {
-                player.sendMessage("§cYou must be looking at the auction chest to bid!");
+                player.sendMessage(plugin.getMessage("not-chest"));
                 return true;
             }
 
             Auction auction = auctionManager.getAuction(block.getLocation());
             if (auction == null) {
-                player.sendMessage("§cNo auction found at this chest!");
+                player.sendMessage(plugin.getMessage("invalid-usage"));
                 return true;
             }
 
@@ -179,7 +186,7 @@ public class AuctionCommand implements CommandExecutor, TabCompleter {
             UUID playerUUID = player.getUniqueId();
             boolean currentState = notificationManager.hasNotificationsEnabled(playerUUID);
             notificationManager.setNotificationsEnabled(playerUUID, !currentState);
-            player.sendMessage("§aNotifications " + (currentState ? "disabled" : "enabled") + "!");
+            player.sendMessage(plugin.getMessage("notifications-toggled", "%state%", currentState ? "disabled" : "enabled"));
             return true;
         } else if (subcommand.equals("claim")) {
             return handleClaim(player);
@@ -189,21 +196,27 @@ public class AuctionCommand implements CommandExecutor, TabCompleter {
         return true;
     }
 
+    /**
+     * Handles the claim command logic for retrieving pending items.
+     * @param player the player claiming items
+     * @return true to indicate the command was processed
+     */
     private boolean handleClaim(Player player) {
         UUID playerUUID = player.getUniqueId();
         ItemStack item = pendingItemsManager.getPendingItems(playerUUID);
 
         if (item == null) {
-            player.sendMessage("§cYou have no pending items to claim!");
+            player.sendMessage(plugin.getMessage("no-pending-items"));
             return true;
         }
 
         if (player.getInventory().firstEmpty() != -1) {
             player.getInventory().addItem(item);
             pendingItemsManager.removePendingItem(playerUUID, item);
-            player.sendMessage("§aSuccessfully claimed " + (item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : plugin.formatItemName(item.getType().name())) + "!");
+            String itemName = item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : plugin.formatItemName(item.getType().name());
+            player.sendMessage(plugin.getMessage("claim-success", "%item%", itemName));
         } else {
-            player.sendMessage("§cYour inventory is full! Please make space to claim your item.");
+            player.sendMessage(plugin.getMessage("inventory-full"));
         }
 
         return true;
@@ -241,6 +254,12 @@ public class AuctionCommand implements CommandExecutor, TabCompleter {
         return completions;
     }
 
+    /**
+     * Parses a duration string into seconds.
+     * @param durationStr the duration string (e.g., 1d2h3m4s)
+     * @return the duration in seconds
+     * @throws IllegalArgumentException if the format is invalid
+     */
     private long parseDuration(String durationStr) {
         Pattern pattern = Pattern.compile("(?i)(\\d+d)?(\\d+h)?(\\d+m)?(\\d+s)?");
         Matcher matcher = pattern.matcher(durationStr);
@@ -292,6 +311,11 @@ public class AuctionCommand implements CommandExecutor, TabCompleter {
         return duration;
     }
 
+    /**
+     * Formats a duration in seconds into a human-readable string.
+     * @param seconds the duration in seconds
+     * @return the formatted duration string
+     */
     private String formatDuration(long seconds) {
         long days = seconds / (24 * 3600);
         seconds %= (24 * 3600);

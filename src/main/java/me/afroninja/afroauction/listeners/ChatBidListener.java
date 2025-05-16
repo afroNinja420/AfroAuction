@@ -2,55 +2,57 @@ package me.afroninja.afroauction.listeners;
 
 import me.afroninja.afroauction.AfroAuction;
 import me.afroninja.afroauction.Auction;
-import org.bukkit.ChatColor;
+import me.afroninja.afroauction.managers.AuctionManager;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
-import org.bukkit.event.HandlerList;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 
+/**
+ * Listens for chat messages to allow players to place bids using a !bid command.
+ */
 public class ChatBidListener implements Listener {
     private final AfroAuction plugin;
-    private final Auction auction;
-    private final Player player;
-    private final double minBid;
+    private final AuctionManager auctionManager;
 
-    public ChatBidListener(AfroAuction plugin, Auction auction, Player player, double minBid) {
+    /**
+     * Constructs a new ChatBidListener instance.
+     * @param plugin the AfroAuction plugin instance
+     * @param auctionManager the AuctionManager instance
+     */
+    public ChatBidListener(AfroAuction plugin, AuctionManager auctionManager) {
         this.plugin = plugin;
-        this.auction = auction;
-        this.player = player;
-        this.minBid = minBid;
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
+        this.auctionManager = auctionManager;
     }
 
+    /**
+     * Handles chat events to process bid commands.
+     * @param event the AsyncPlayerChatEvent
+     */
     @EventHandler
     public void onPlayerChat(AsyncPlayerChatEvent event) {
-        if (event.getPlayer() != player) return;
-        event.setCancelled(true); // Prevent chat message from broadcasting
+        Player player = event.getPlayer();
+        String message = event.getMessage();
 
-        String message = event.getMessage().trim();
-        HandlerList.unregisterAll(this); // Unregister after processing
-
-        plugin.getServer().getScheduler().runTask(plugin, () -> {
-            if (message.equalsIgnoreCase("cancel")) {
-                player.sendMessage(ChatColor.YELLOW + "Bid cancelled.");
+        if (message.startsWith("!bid")) {
+            event.setCancelled(true);
+            String[] parts = message.split(" ");
+            if (parts.length != 2) {
+                player.sendMessage(plugin.getMessage("invalid-bid-format"));
                 return;
             }
 
             try {
-                double bidAmount = Double.parseDouble(message);
-                if (bidAmount < minBid) {
-                    player.sendMessage(ChatColor.RED + "Bid must be at least $" + String.format("%.2f", minBid) + "!");
+                double bidAmount = Double.parseDouble(parts[1]);
+                Auction auction = auctionManager.getAuction(player.getTargetBlock(null, 5).getLocation());
+                if (auction == null) {
+                    player.sendMessage(plugin.getMessage("no-auction-target"));
                     return;
                 }
-                if (auction.placeBid(player, bidAmount)) {
-                    player.sendMessage(ChatColor.GREEN + "Bid placed successfully!");
-                } else {
-                    player.sendMessage(ChatColor.RED + "Bid failed! Ensure you have enough money ($" + String.format("%.2f", bidAmount) + ").");
-                }
+                auction.placeBid(player, bidAmount);
             } catch (NumberFormatException e) {
-                player.sendMessage(ChatColor.RED + "Invalid bid amount! Enter a number or 'cancel'.");
+                player.sendMessage(plugin.getMessage("invalid-price-format"));
             }
-        });
+        }
     }
 }
