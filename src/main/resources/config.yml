@@ -20,6 +20,12 @@ min-bid-percentage-increment: 10
 # Item type for the bid button in the GUI (use Material names, e.g., EMERALD, DIAMOND)
 bid-button-item: EMERALD
 
+# Hologram settings
+hologram-base-height: 1.7
+hologram-line-spacing: 0.25
+hologram-item-offset: 0.25
+hologram-update-interval: 20
+
 # Messages used throughout the plugin (supports & color codes)
 messages:
   player-only: "&cThis command can only be used by players!"
