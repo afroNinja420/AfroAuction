@@ -5,8 +5,13 @@ import me.afroninja.afroauction.managers.NotificationManager;
 import me.afroninja.afroauction.managers.PendingItemsManager;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Location;
+import org.bukkit.entity.ArmorStand;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.EntityType;
+import org.bukkit.entity.Item;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.util.Vector;
 
 import java.util.UUID;
 
@@ -25,6 +30,9 @@ public class Auction {
     private final long endTime;
     private UUID highestBidder;
     private double highestBid;
+    private ArmorStand hologramStand;
+    private Item floatingItem;
+    private int updateTaskId;
 
     /**
      * Constructs a new Auction instance.
@@ -47,7 +55,9 @@ public class Auction {
         this.highestBid = startPrice;
         this.endTime = System.currentTimeMillis() + (duration * 1000);
         this.highestBidder = null;
+        createHologram();
         scheduleEnd();
+        scheduleHologramUpdate();
     }
 
     /**
@@ -96,10 +106,69 @@ public class Auction {
     }
 
     /**
+     * Creates a hologram above the auction chest using an armor stand and floating item.
+     */
+    private void createHologram() {
+        Location hologramLocation = chestLocation.clone().add(0.5, 1.5, 0.5); // Center above chest
+
+        // Spawn armor stand for text
+        hologramStand = (ArmorStand) chestLocation.getWorld().spawnEntity(hologramLocation, EntityType.ARMOR_STAND);
+        hologramStand.setInvisible(true);
+        hologramStand.setGravity(false);
+        hologramStand.setCustomNameVisible(true);
+        updateHologramText();
+
+        // Spawn floating item
+        Location itemLocation = chestLocation.clone().add(0.5, 2.0, 0.5);
+        floatingItem = chestLocation.getWorld().dropItem(itemLocation, item);
+        floatingItem.setPickupDelay(Integer.MAX_VALUE); // Prevent pickup
+        floatingItem.setVelocity(new Vector(0, 0, 0)); // No initial velocity
+        floatingItem.setGravity(false); // Make it float
+    }
+
+    /**
+     * Updates the hologram text with current auction details.
+     */
+    private void updateHologramText() {
+        if (hologramStand == null) return;
+        String itemName = item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : plugin.formatItemName(item.getType().name());
+        long timeLeft = (endTime - System.currentTimeMillis()) / 1000;
+        String display = org.bukkit.ChatColor.translateAlternateColorCodes('&',
+                "&eAuction: &f" + itemName + "\n" +
+                        "&eHighest Bid: &f" + String.format("%.2f", highestBid) + "\n" +
+                        "&eTime Left: &f" + timeLeft + "s"
+        );
+        hologramStand.setCustomName(display);
+    }
+
+    /**
+     * Schedules a repeating task to update the hologram text every second.
+     */
+    private void scheduleHologramUpdate() {
+        updateTaskId = plugin.getServer().getScheduler().scheduleSyncRepeatingTask(plugin, () -> {
+            if (System.currentTimeMillis() >= endTime) {
+                plugin.getServer().getScheduler().cancelTask(updateTaskId);
+                return;
+            }
+            updateHologramText();
+        }, 0L, 20L); // Update every 20 ticks (1 second)
+    }
+
+    /**
      * Ends the auction, distributing items and funds accordingly.
      */
     private void endAuction() {
         auctionManager.removeAuction(chestLocation);
+
+        // Remove hologram
+        if (hologramStand != null) {
+            hologramStand.remove();
+            hologramStand = null;
+        }
+        if (floatingItem != null) {
+            floatingItem.remove();
+            floatingItem = null;
+        }
 
         if (highestBidder == null) {
             pendingItemsManager.addPendingItem(sellerUUID, item);
