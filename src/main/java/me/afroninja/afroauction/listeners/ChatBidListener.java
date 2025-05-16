@@ -1,5 +1,7 @@
-package me.afroninja.afroauction;
+package me.afroninja.afroauction.listeners;
 
+import me.afroninja.afroauction.AfroAuction;
+import me.afroninja.afroauction.Auction;
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;

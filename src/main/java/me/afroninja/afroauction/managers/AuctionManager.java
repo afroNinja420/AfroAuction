@@ -1,5 +1,7 @@
-package me.afroninja.afroauction;
+package me.afroninja.afroauction.managers;
 
+import me.afroninja.afroauction.AfroAuction;
+import me.afroninja.afroauction.Auction;
 import org.bukkit.Location;
 
 import java.util.Collection;

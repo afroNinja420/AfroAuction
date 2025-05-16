@@ -1,5 +1,10 @@
 package me.afroninja.afroauction;
 
+import me.afroninja.afroauction.listeners.AuctionListener;
+import me.afroninja.afroauction.listeners.PlayerJoinListener;
+import me.afroninja.afroauction.managers.AuctionManager;
+import me.afroninja.afroauction.managers.NotificationManager;
+import me.afroninja.afroauction.managers.PendingItemsManager;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.RegisteredServiceProvider;
@@ -30,11 +35,12 @@ public class AfroAuction extends JavaPlugin {
         auctionManager.loadAuctions();
 
         getServer().getPluginManager().registerEvents(new AuctionListener(this, auctionManager), this);
-        getServer().getPluginManager().registerEvents(new PendingItemsListener(this), this);
+        getServer().getPluginManager().registerEvents(new PlayerJoinListener(this, pendingItemsManager), this);
 
-        PlayerAuctionCommand auctionCommand = new PlayerAuctionCommand(this, auctionManager, notificationManager);
+        AuctionCommand auctionCommand = new AuctionCommand(this, auctionManager, notificationManager, pendingItemsManager);
         getCommand("pa").setExecutor(auctionCommand);
         getCommand("pa").setTabCompleter(auctionCommand);
+        getCommand("claim").setExecutor(auctionCommand);
 
         getLogger().info("AfroAuction enabled!");
     }

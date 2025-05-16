@@ -1,5 +1,8 @@
 package me.afroninja.afroauction;
 
+import me.afroninja.afroauction.managers.AuctionManager;
+import me.afroninja.afroauction.managers.NotificationManager;
+import me.afroninja.afroauction.managers.PendingItemsManager;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.Chest;
@@ -21,11 +24,15 @@ import java.util.regex.Pattern;
 public class AuctionCommand implements CommandExecutor, TabCompleter {
     private final AfroAuction plugin;
     private final AuctionManager auctionManager;
+    private final NotificationManager notificationManager;
+    private final PendingItemsManager pendingItemsManager;
     private final Map<UUID, Long> cooldowns;
 
-    public AuctionCommand(AfroAuction plugin, AuctionManager auctionManager) {
+    public AuctionCommand(AfroAuction plugin, AuctionManager auctionManager, NotificationManager notificationManager, PendingItemsManager pendingItemsManager) {
         this.plugin = plugin;
         this.auctionManager = auctionManager;
+        this.notificationManager = notificationManager;
+        this.pendingItemsManager = pendingItemsManager;
         this.cooldowns = new HashMap<>();
     }
 
@@ -38,6 +45,12 @@ public class AuctionCommand implements CommandExecutor, TabCompleter {
 
         Player player = (Player) sender;
 
+        // Handle /claim command directly
+        if (label.equalsIgnoreCase("claim")) {
+            return handleClaim(player);
+        }
+
+        // Handle /pa command with subcommands
         if (args.length == 0) {
             player.sendMessage(plugin.getMessage("invalid-usage"));
             return true;
@@ -162,9 +175,37 @@ public class AuctionCommand implements CommandExecutor, TabCompleter {
 
             auction.placeBid(player, bidAmount);
             return true;
+        } else if (subcommand.equals("notifications")) {
+            UUID playerUUID = player.getUniqueId();
+            boolean currentState = notificationManager.hasNotificationsEnabled(playerUUID);
+            notificationManager.setNotificationsEnabled(playerUUID, !currentState);
+            player.sendMessage("§aNotifications " + (currentState ? "disabled" : "enabled") + "!");
+            return true;
+        } else if (subcommand.equals("claim")) {
+            return handleClaim(player);
         }
 
         player.sendMessage(plugin.getMessage("invalid-usage"));
+        return true;
+    }
+
+    private boolean handleClaim(Player player) {
+        UUID playerUUID = player.getUniqueId();
+        ItemStack item = pendingItemsManager.getPendingItems(playerUUID);
+
+        if (item == null) {
+            player.sendMessage("§cYou have no pending items to claim!");
+            return true;
+        }
+
+        if (player.getInventory().firstEmpty() != -1) {
+            player.getInventory().addItem(item);
+            pendingItemsManager.removePendingItem(playerUUID, item);
+            player.sendMessage("§aSuccessfully claimed " + (item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : plugin.formatItemName(item.getType().name())) + "!");
+        } else {
+            player.sendMessage("§cYour inventory is full! Please make space to claim your item.");
+        }
+
         return true;
     }
 
@@ -179,6 +220,12 @@ public class AuctionCommand implements CommandExecutor, TabCompleter {
             }
             if ("bid".startsWith(args[0].toLowerCase())) {
                 completions.add("bid");
+            }
+            if ("notifications".startsWith(args[0].toLowerCase())) {
+                completions.add("notifications");
+            }
+            if ("claim".startsWith(args[0].toLowerCase())) {
+                completions.add("claim");
             }
         } else if (args.length == 2) {
             String subcommand = args[0].toLowerCase();

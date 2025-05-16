@@ -1,5 +1,6 @@
-package me.afroninja.afroauction;
+package me.afroninja.afroauction.listeners;
 
+import me.afroninja.afroauction.AfroAuction;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;

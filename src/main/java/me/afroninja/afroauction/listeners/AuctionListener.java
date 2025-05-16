@@ -1,5 +1,8 @@
-package me.afroninja.afroauction;
+package me.afroninja.afroauction.listeners;
 
+import me.afroninja.afroauction.AfroAuction;
+import me.afroninja.afroauction.Auction;
+import me.afroninja.afroauction.managers.AuctionManager;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.block.Chest;

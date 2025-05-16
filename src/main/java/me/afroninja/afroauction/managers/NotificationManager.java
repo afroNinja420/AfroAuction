@@ -1,5 +1,6 @@
-package me.afroninja.afroauction;
+package me.afroninja.afroauction.managers;
 
+import me.afroninja.afroauction.AfroAuction;
 import org.bukkit.entity.Player;
 import java.util.HashMap;
 import java.util.Map;

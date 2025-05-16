@@ -6,8 +6,12 @@ depend: [Vault]
 
 commands:
   pa:
-    description: Manage auctions (create, bid)
-    usage: /<command> <create|bid> [args]
+    description: Manage auctions (create, bid, notifications, claim)
+    usage: /<command> <create|bid|notifications|claim> [args]
+    permission: afroauction.use
+  claim:
+    description: Claim pending auction items
+    usage: /<command>
     permission: afroauction.use
 
 permissions:
