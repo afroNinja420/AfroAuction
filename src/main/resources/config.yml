@@ -21,9 +21,9 @@ min-bid-percentage-increment: 10
 bid-button-item: EMERALD
 
 # Hologram settings
-hologram-base-height: 1.7
+hologram-base-height: 1.0
 hologram-line-spacing: 0.25
-hologram-item-offset: 0.25
+hologram-item-offset: 0.0
 hologram-update-interval: 20
 
 # Messages used throughout the plugin (supports & color codes)
