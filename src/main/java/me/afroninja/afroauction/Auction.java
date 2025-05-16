@@ -71,28 +71,36 @@ public class Auction {
      * Places a bid on the auction if valid.
      * @param bidder the player placing the bid
      * @param bidAmount the bid amount
+     * @return true if the bid was successful, false otherwise
      */
-    public void placeBid(Player bidder, double bidAmount) {
+    public boolean placeBid(Player bidder, double bidAmount) {
         if (System.currentTimeMillis() >= endTime) {
             bidder.sendMessage(plugin.getMessage("auction-ended"));
-            return;
+            return false;
         }
 
-        if (bidAmount <= highestBid) {
-            bidder.sendMessage(plugin.getMessage("bid-too-low", "%current_bid%", String.format("%.2f", highestBid)));
-            return;
+        // Determine the minimum bid
+        double minBid;
+        if (highestBidder == null) {
+            // First bid: must be at least the starting price
+            minBid = startPrice;
+        } else {
+            // Subsequent bids: must be at least 10% higher than the current bid
+            double minPercentageIncrement = plugin.getConfig().getDouble("min-bid-percentage-increment", 10.0);
+            minBid = highestBid * (1 + minPercentageIncrement / 100.0);
         }
 
-        double minPercentageIncrement = plugin.getConfig().getDouble("min-bid-percentage-increment", 10.0);
-        double minBid = highestBid * (1 + minPercentageIncrement / 100.0);
         if (bidAmount < minBid) {
-            bidder.sendMessage(plugin.getMessage("bid-percentage-too-low", "%min_percentage%", String.format("%.2f", minBid)));
-            return;
+            String messageKey = highestBidder == null ? "bid-too-low" : "bid-percentage-too-low";
+            String placeholderKey = highestBidder == null ? "%current_bid%" : "%min_percentage%";
+            String placeholderValue = highestBidder == null ? String.format("%.2f", startPrice) : String.format("%.2f", minBid);
+            bidder.sendMessage(plugin.getMessage(messageKey, placeholderKey, placeholderValue));
+            return false;
         }
 
         if (!economy.has(bidder, bidAmount)) {
             bidder.sendMessage(plugin.getMessage("insufficient-funds"));
-            return;
+            return false;
         }
 
         // Refund the previous highest bidder
@@ -112,6 +120,7 @@ public class Auction {
         bidCount++;
         String itemName = item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : plugin.formatItemName(item.getType().name());
         bidder.sendMessage(plugin.getMessage("bid-placed", "%amount%", String.format("%.2f", bidAmount), "%item%", itemName));
+        return true;
     }
 
     /**

@@ -99,7 +99,9 @@ public class AuctionGUI implements Listener {
 
         if (event.getRawSlot() == 15) {
             Player player = (Player) event.getWhoClicked();
-            double minBid = auction.getHighestBid() * (1 + plugin.getConfig().getDouble("min-bid-percentage-increment", 10.0) / 100.0);
+            double minBid = auction.getHighestBidder() == null
+                    ? auction.getStartPrice()
+                    : auction.getHighestBid() * (1 + plugin.getConfig().getDouble("min-bid-percentage-increment", 10.0) / 100.0);
             player.sendMessage(plugin.getMessage("bid-prompt", "%min_bid%", String.format("%.2f", minBid)));
             plugin.addPlayerAwaitingBid(player.getUniqueId(), auction);
             player.closeInventory();
