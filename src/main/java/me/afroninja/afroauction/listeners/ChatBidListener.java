@@ -2,6 +2,7 @@ package me.afroninja.afroauction.listeners;
 
 import me.afroninja.afroauction.AfroAuction;
 import me.afroninja.afroauction.Auction;
+import me.afroninja.afroauction.AuctionGUI;
 import me.afroninja.afroauction.managers.AuctionManager;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -9,7 +10,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 
 /**
- * Listens for chat messages to allow players to place bids using a !bid command.
+ * Listens for chat messages to handle bid inputs after clicking the bid button in the GUI.
  */
 public class ChatBidListener implements Listener {
     private final AfroAuction plugin;
@@ -25,33 +26,34 @@ public class ChatBidListener implements Listener {
         this.auctionManager = auctionManager;
     }
 
-    /**
-     * Handles chat events to process bid commands.
-     * @param event the AsyncPlayerChatEvent
-     */
     @EventHandler
     public void onPlayerChat(AsyncPlayerChatEvent event) {
         Player player = event.getPlayer();
-        String message = event.getMessage();
+        UUID playerUUID = player.getUniqueId();
 
-        if (message.startsWith("!bid")) {
-            event.setCancelled(true);
-            String[] parts = message.split(" ");
-            if (parts.length != 2) {
-                player.sendMessage(plugin.getMessage("invalid-bid-format"));
-                return;
-            }
+        // Check if the player is awaiting a bid from any GUI
+        for (Auction auction : auctionManager.getActiveAuctions().values()) {
+            AuctionGUI gui = new AuctionGUI(plugin, auction);
+            if (gui.isPlayerAwaitingBid(playerUUID)) {
+                event.setCancelled(true);
+                gui.removePlayerFromAwaitingBid(playerUUID);
 
-            try {
-                double bidAmount = Double.parseDouble(parts[1]);
-                Auction auction = auctionManager.getAuction(player.getTargetBlock(null, 5).getLocation());
-                if (auction == null) {
-                    player.sendMessage(plugin.getMessage("no-auction-target"));
+                String message = event.getMessage().trim();
+                if (message.equalsIgnoreCase("cancel")) {
+                    player.sendMessage(plugin.getMessage("bid-cancelled"));
                     return;
                 }
+
+                double bidAmount;
+                try {
+                    bidAmount = Double.parseDouble(message);
+                } catch (NumberFormatException e) {
+                    player.sendMessage(plugin.getMessage("invalid-bid"));
+                    return;
+                }
+
                 auction.placeBid(player, bidAmount);
-            } catch (NumberFormatException e) {
-                player.sendMessage(plugin.getMessage("invalid-price-format"));
+                return;
             }
         }
     }

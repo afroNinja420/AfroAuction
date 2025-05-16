@@ -156,35 +156,6 @@ public class AuctionCommand implements CommandExecutor, TabCompleter {
             cooldowns.put(playerUUID, currentTime);
 
             return true;
-        } else if (subcommand.equals("bid")) {
-            if (args.length != 2) {
-                player.sendMessage(plugin.getMessage("invalid-usage"));
-                return true;
-            }
-
-            double bidAmount;
-            try {
-                bidAmount = Double.parseDouble(args[1]);
-            } catch (NumberFormatException e) {
-                player.sendMessage(plugin.getMessage("invalid-price-format"));
-                return true;
-            }
-
-            // Find auction at the targeted chest
-            Block block = player.getTargetBlock(null, 5);
-            if (block == null || !(block.getState() instanceof Chest)) {
-                player.sendMessage(plugin.getMessage("not-chest"));
-                return true;
-            }
-
-            Auction auction = auctionManager.getAuction(block.getLocation());
-            if (auction == null) {
-                player.sendMessage(plugin.getMessage("invalid-usage"));
-                return true;
-            }
-
-            auction.placeBid(player, bidAmount);
-            return true;
         } else if (subcommand.equals("notifications")) {
             UUID playerUUID = player.getUniqueId();
             boolean currentState = notificationManager.hasNotificationsEnabled(playerUUID);
@@ -234,9 +205,6 @@ public class AuctionCommand implements CommandExecutor, TabCompleter {
             if ("create".startsWith(args[0].toLowerCase())) {
                 completions.add("create");
             }
-            if ("bid".startsWith(args[0].toLowerCase())) {
-                completions.add("bid");
-            }
             if ("notifications".startsWith(args[0].toLowerCase())) {
                 completions.add("notifications");
             }
@@ -247,8 +215,6 @@ public class AuctionCommand implements CommandExecutor, TabCompleter {
             String subcommand = args[0].toLowerCase();
             if (subcommand.equals("create")) {
                 completions.add("<price>");
-            } else if (subcommand.equals("bid")) {
-                completions.add("<amount>");
             }
         } else if (args.length == 3 && args[0].equalsIgnoreCase("create")) {
             completions.add("<duration>");

@@ -59,6 +59,14 @@ public class AuctionManager {
     }
 
     /**
+     * Retrieves all active auctions.
+     * @return the map of active auctions
+     */
+    public Map<Location, Auction> getActiveAuctions() {
+        return activeAuctions;
+    }
+
+    /**
      * Checks if a chest location is in use by an auction.
      * @param location the location to check
      * @return true if the location is in use, false otherwise

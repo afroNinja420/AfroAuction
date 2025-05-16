@@ -27,9 +27,11 @@ public class Auction {
     private final UUID sellerUUID;
     private final ItemStack item;
     private final Location chestLocation;
+    private final double startPrice;
     private final long endTime;
     private UUID highestBidder;
     private double highestBid;
+    private int bidCount;
     private ArmorStand hologramStand;
     private Item floatingItem;
     private int updateTaskId;
@@ -52,9 +54,11 @@ public class Auction {
         this.sellerUUID = sellerUUID;
         this.item = item;
         this.chestLocation = chestLocation;
+        this.startPrice = startPrice;
         this.highestBid = startPrice;
         this.endTime = System.currentTimeMillis() + (duration * 1000);
         this.highestBidder = null;
+        this.bidCount = 0;
         createHologram();
         scheduleEnd();
         scheduleHologramUpdate();
@@ -76,9 +80,10 @@ public class Auction {
             return;
         }
 
-        double minBidIncrement = plugin.getConfig().getDouble("min-bid-increment", 1.0);
-        if (bidAmount < highestBid + minBidIncrement) {
-            bidder.sendMessage(plugin.getMessage("bid-increment-too-low", "%min_increment%", String.format("%.2f", minBidIncrement)));
+        double minPercentageIncrement = plugin.getConfig().getDouble("min-bid-percentage-increment", 10.0);
+        double minBid = highestBid * (1 + minPercentageIncrement / 100.0);
+        if (bidAmount < minBid) {
+            bidder.sendMessage(plugin.getMessage("bid-percentage-too-low", "%min_percentage%", String.format("%.2f", minBid)));
             return;
         }
 
@@ -101,6 +106,7 @@ public class Auction {
         economy.withdrawPlayer(bidder, bidAmount);
         highestBidder = bidder.getUniqueId();
         highestBid = bidAmount;
+        bidCount++;
         String itemName = item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : plugin.formatItemName(item.getType().name());
         bidder.sendMessage(plugin.getMessage("bid-placed", "%amount%", String.format("%.2f", bidAmount), "%item%", itemName));
     }
@@ -109,7 +115,8 @@ public class Auction {
      * Creates a hologram above the auction chest using an armor stand and floating item.
      */
     private void createHologram() {
-        Location hologramLocation = chestLocation.clone().add(0.5, 1.5, 0.5); // Center above chest
+        Location hologramLocation = chestLocation.clone().add(0.5, 1.5, 0.5); // Center above chest, 1.5 blocks up
+        Location itemLocation = chestLocation.clone().add(0.5, 2.5, 0.5); // Item 2.5 blocks up
 
         // Spawn armor stand for text
         hologramStand = (ArmorStand) chestLocation.getWorld().spawnEntity(hologramLocation, EntityType.ARMOR_STAND);
@@ -119,7 +126,6 @@ public class Auction {
         updateHologramText();
 
         // Spawn floating item
-        Location itemLocation = chestLocation.clone().add(0.5, 2.0, 0.5);
         floatingItem = chestLocation.getWorld().dropItem(itemLocation, item);
         floatingItem.setPickupDelay(Integer.MAX_VALUE); // Prevent pickup
         floatingItem.setVelocity(new Vector(0, 0, 0)); // No initial velocity
@@ -134,9 +140,9 @@ public class Auction {
         String itemName = item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : plugin.formatItemName(item.getType().name());
         long timeLeft = (endTime - System.currentTimeMillis()) / 1000;
         String display = org.bukkit.ChatColor.translateAlternateColorCodes('&',
-                "&eAuction: &f" + itemName + "\n" +
-                        "&eHighest Bid: &f" + String.format("%.2f", highestBid) + "\n" +
-                        "&eTime Left: &f" + timeLeft + "s"
+                "&6" + itemName + "\n" +
+                        "&eBid: &f" + String.format("%.2f", highestBid) + "\n" +
+                        "&eTime: &f" + timeLeft + "s"
         );
         hologramStand.setCustomName(display);
     }
@@ -216,11 +222,27 @@ public class Auction {
     }
 
     /**
+     * Retrieves the starting bid amount.
+     * @return the starting bid
+     */
+    public double getStartPrice() {
+        return startPrice;
+    }
+
+    /**
      * Retrieves the highest bid amount.
      * @return the highest bid
      */
     public double getHighestBid() {
         return highestBid;
+    }
+
+    /**
+     * Retrieves the number of bids placed.
+     * @return the number of bids
+     */
+    public int getBidCount() {
+        return bidCount;
     }
 
     /**

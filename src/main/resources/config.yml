@@ -1,39 +1,53 @@
+# AfroAuction Configuration File
+
+# Cooldown between auctions for a single player (in seconds)
 auction-cooldown: 60
+
+# Maximum number of active auctions a player can have
 max-active-auctions: 5
+
+# Minimum and maximum starting price for auctions
 min-start-price: 1.0
 max-start-price: 1000000.0
+
+# Minimum and maximum duration for auctions (in seconds)
 min-auction-duration: 30
 max-auction-duration: 86400
-min-bid-increment: 1.0
 
+# Minimum bid increment as a percentage of the current highest bid
+min-bid-percentage-increment: 10
+
+# Item type for the bid button in the GUI (use Material names, e.g., EMERALD, DIAMOND)
+bid-button-item: EMERALD
+
+# Messages used throughout the plugin (supports & color codes)
 messages:
   player-only: "&cThis command can only be used by players!"
-  invalid-usage: "&cInvalid usage! Use /pa <create|bid|notifications|claim> [args]"
-  cooldown: "&cYou must wait %cooldown% seconds before creating another auction!"
+  invalid-usage: "&cUsage: /pa create <price> <duration> | /pa notifications | /pa claim"
+  cooldown: "&cYou must wait %cooldown%s before starting another auction!"
   max-auctions: "&cYou have reached the maximum number of active auctions (%max_auctions%)!"
-  invalid-price-format: "&cInvalid price format! Please enter a valid number."
+  invalid-price-format: "&cPrice must be a valid number!"
   invalid-price: "&cPrice must be between %min_price% and %max_price%!"
-  invalid-duration-format: "&cInvalid duration format! Use a format like 1d2h3m4s."
-  invalid-duration: "&cDuration must be between %min_duration% and %max_duration% seconds!"
-  no-item: "&cYou must be holding an item to create an auction!"
-  not-chest: "&cYou must be looking at a chest to create an auction!"
+  invalid-duration-format: "&cDuration format: [days]d[hours]h[minutes]m[seconds]s (e.g., 1d2h3m4s)"
+  invalid-duration: "&cDuration must be between %min_duration%s and %max_duration%s!"
+  no-item: "&cYou must hold an item to auction!"
+  not-chest: "&cYou must be looking at a chest to start an auction!"
   chest-in-use: "&cThis chest is already in use by another auction!"
   auction-created: "&aAuction created for %item% with a starting price of %price% for %duration%!"
-  bid-too-low: "&cYour bid must be higher than the current highest bid of %current_bid%!"
+  auction-ended: "&cThis auction has ended!"
+  bid-too-low: "&cYour bid must be higher than the current bid of %current_bid%!"
   bid-increment-too-low: "&cYour bid must be at least %min_increment% higher than the current bid!"
-  insufficient-funds: "&cYou don't have enough money to place this bid!"
-  bid-placed: "&aYou have placed a bid of %amount% on %item%!"
-  auction-ended: "&cThis auction has already ended!"
-  auction-no-bids: "&eYour auction for %item% ended with no bids. The item has been added to your pending items."
-  auction-won: "&aYou won the auction for %item% for %amount%!"
-  auction-sold: "&aYour auction for %item% sold for %amount%!"
+  bid-percentage-too-low: "&cYour bid must be at least %min_percentage% higher than the current bid!"
+  insufficient-funds: "&cYou do not have enough money to place this bid!"
   outbid: "&eYou have been outbid on %item%!"
+  bid-placed: "&aBid of %amount% placed on %item%!"
+  auction-no-bids: "&eYour auction for %item% ended with no bids."
+  auction-won: "&aYou won %item% for %amount%!"
+  auction-sold: "&aYour auction for %item% sold for %amount%!"
+  notifications-toggled: "&eAuction notifications have been %state%."
   no-pending-items: "&cYou have no pending items to claim!"
-  claim-success: "&aSuccessfully claimed %item%!"
-  inventory-full: "&cYour inventory is full! Please make space to claim your item."
-  pending-item-received: "&aYou have received a pending item: %item%!"
-  notifications-toggled: "&aNotifications %state%!"
-  invalid-bid-format: "&cInvalid bid format! Use !bid <amount>"
-  no-auction-target: "&cNo auction found at your target location!"
-  gui-bid-item: "&eBid: %amount%"
-  gui-time-left: "&eTime Left: %time%"
+  claim-success: "&aYou have claimed %item%!"
+  inventory-full: "&cYour inventory is full! Please make space to claim your items."
+  bid-prompt: "&ePlease type your bid amount in chat (minimum %min_bid%). Type 'cancel' to cancel."
+  invalid-bid: "&cInvalid bid amount! Please enter a number or 'cancel'."
+  bid-cancelled: "&eBid cancelled."
