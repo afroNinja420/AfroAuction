@@ -1,11 +1,15 @@
 package me.afroninja.afroauction;
 
+import me.afroninja.afroauction.listeners.AuctionListener;
+import me.afroninja.afroauction.listeners.ChatBidListener;
+import me.afroninja.afroauction.listeners.PlayerJoinListener;
+import me.afroninja.afroauction.managers.AuctionManager;
+import me.afroninja.afroauction.managers.NotificationManager;
+import me.afroninja.afroauction.managers.PendingItemsManager;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
-
-import java.io.File;
 
 /**
  * The main class for the AfroAuction plugin, responsible for initialization, lifecycle management,

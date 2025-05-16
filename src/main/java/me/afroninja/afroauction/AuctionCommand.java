@@ -1,5 +1,8 @@
 package me.afroninja.afroauction;
 
+import me.afroninja.afroauction.managers.AuctionManager;
+import me.afroninja.afroauction.managers.NotificationManager;
+import me.afroninja.afroauction.managers.PendingItemsManager;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.Chest;

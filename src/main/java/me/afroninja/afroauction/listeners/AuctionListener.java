@@ -2,6 +2,7 @@ package me.afroninja.afroauction.listeners;
 
 import me.afroninja.afroauction.AfroAuction;
 import me.afroninja.afroauction.Auction;
+import me.afroninja.afroauction.AuctionGUI;
 import me.afroninja.afroauction.managers.AuctionManager;
 import org.bukkit.block.Block;
 import org.bukkit.block.Chest;

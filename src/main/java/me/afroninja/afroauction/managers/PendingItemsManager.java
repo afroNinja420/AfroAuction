@@ -3,6 +3,7 @@ package me.afroninja.afroauction.managers;
 import me.afroninja.afroauction.AfroAuction;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 
 import java.io.File;
@@ -60,7 +61,7 @@ public class PendingItemsManager {
     /**
      * Gives pending items to a player if their inventory has space.
      * @param playerUUID the player's UUID
-     * @param player the player to give items to
+     * @param player the Player to give items to
      */
     public void givePendingItems(UUID playerUUID, Player player) {
         ItemStack item = pendingItems.get(playerUUID);

@@ -169,4 +169,20 @@ public class Auction {
     public long getEndTime() {
         return endTime;
     }
+
+    /**
+     * Retrieves the location of the chest associated with this auction.
+     * @return the Location of the chest
+     */
+    public Location getChestLocation() {
+        return chestLocation;
+    }
+
+    /**
+     * Retrieves the UUID of the seller.
+     * @return the seller's UUID
+     */
+    public UUID getSellerUUID() {
+        return sellerUUID;
+    }
 }

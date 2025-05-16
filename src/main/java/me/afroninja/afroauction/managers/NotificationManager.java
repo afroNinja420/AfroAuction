@@ -3,6 +3,7 @@ package me.afroninja.afroauction.managers;
 import me.afroninja.afroauction.AfroAuction;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
 
 import java.io.File;
 import java.io.IOException;
