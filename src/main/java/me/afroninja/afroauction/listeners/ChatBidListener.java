@@ -9,6 +9,8 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.AsyncPlayerChatEvent;
 
+import java.util.UUID;
+
 /**
  * Listens for chat messages to handle bid inputs after clicking the bid button in the GUI.
  */
