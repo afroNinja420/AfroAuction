@@ -12,9 +12,6 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
 
 /**
  * Manages the auction GUI for viewing and bidding on auctions.
@@ -23,7 +20,6 @@ public class AuctionGUI implements Listener {
     private final AfroAuction plugin;
     private final Auction auction;
     private final Inventory inventory;
-    private final Set<UUID> playersAwaitingBid;
     private int updateTaskId;
 
     /**
@@ -35,7 +31,6 @@ public class AuctionGUI implements Listener {
         this.plugin = plugin;
         this.auction = auction;
         this.inventory = Bukkit.createInventory(null, 27, "Auction");
-        this.playersAwaitingBid = new HashSet<>();
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
         updateInventory();
         scheduleUpdate();
@@ -106,7 +101,7 @@ public class AuctionGUI implements Listener {
             Player player = (Player) event.getWhoClicked();
             double minBid = auction.getHighestBid() * (1 + plugin.getConfig().getDouble("min-bid-percentage-increment", 10.0) / 100.0);
             player.sendMessage(plugin.getMessage("bid-prompt", "%min_bid%", String.format("%.2f", minBid)));
-            playersAwaitingBid.add(player.getUniqueId());
+            plugin.addPlayerAwaitingBid(player.getUniqueId(), auction);
             player.closeInventory();
         }
     }
@@ -117,23 +112,6 @@ public class AuctionGUI implements Listener {
         if (inventory.getViewers().isEmpty()) {
             plugin.getServer().getScheduler().cancelTask(updateTaskId);
         }
-    }
-
-    /**
-     * Checks if a player is awaiting a bid input.
-     * @param playerUUID the player's UUID
-     * @return true if the player is awaiting a bid, false otherwise
-     */
-    public boolean isPlayerAwaitingBid(UUID playerUUID) {
-        return playersAwaitingBid.contains(playerUUID);
-    }
-
-    /**
-     * Removes a player from the awaiting bid list.
-     * @param playerUUID the player's UUID
-     */
-    public void removePlayerFromAwaitingBid(UUID playerUUID) {
-        playersAwaitingBid.remove(playerUUID);
     }
 
     /**

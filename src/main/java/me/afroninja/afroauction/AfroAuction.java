@@ -14,6 +14,9 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * The main class for the AfroAuction plugin, responsible for initialization, lifecycle management,
@@ -25,6 +28,7 @@ public class AfroAuction extends JavaPlugin {
     private AuctionManager auctionManager;
     private NotificationManager notificationManager;
     private PendingItemsManager pendingItemsManager;
+    private Map<UUID, Auction> playersAwaitingBid;
 
     @Override
     public void onEnable() {
@@ -53,6 +57,7 @@ public class AfroAuction extends JavaPlugin {
         auctionManager = new AuctionManager(this);
         notificationManager = new NotificationManager(this);
         pendingItemsManager = new PendingItemsManager(this);
+        playersAwaitingBid = new HashMap<>();
 
         auctionManager.loadAuctions();
         notificationManager.loadNotificationSettings();
@@ -138,6 +143,32 @@ public class AfroAuction extends JavaPlugin {
      */
     public PendingItemsManager getPendingItemsManager() {
         return pendingItemsManager;
+    }
+
+    /**
+     * Adds a player to the awaiting bid list with their associated auction.
+     * @param playerUUID the player's UUID
+     * @param auction the associated auction
+     */
+    public void addPlayerAwaitingBid(UUID playerUUID, Auction auction) {
+        playersAwaitingBid.put(playerUUID, auction);
+    }
+
+    /**
+     * Removes a player from the awaiting bid list.
+     * @param playerUUID the player's UUID
+     */
+    public void removePlayerFromAwaitingBid(UUID playerUUID) {
+        playersAwaitingBid.remove(playerUUID);
+    }
+
+    /**
+     * Checks if a player is awaiting a bid and returns the associated auction.
+     * @param playerUUID the player's UUID
+     * @return the associated Auction, or null if not awaiting
+     */
+    public Auction getAuctionForPlayer(UUID playerUUID) {
+        return playersAwaitingBid.get(playerUUID);
     }
 
     /**
