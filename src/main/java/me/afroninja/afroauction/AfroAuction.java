@@ -8,8 +8,12 @@ import me.afroninja.afroauction.managers.NotificationManager;
 import me.afroninja.afroauction.managers.PendingItemsManager;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.java.JavaPlugin;
+
+import java.io.File;
+import java.io.IOException;
 
 /**
  * The main class for the AfroAuction plugin, responsible for initialization, lifecycle management,
@@ -24,8 +28,21 @@ public class AfroAuction extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        saveDefaultConfig();
-        config = getConfig();
+        // Ensure the config file exists and is loaded
+        File configFile = new File(getDataFolder(), "config.yml");
+        if (!configFile.exists()) {
+            saveDefaultConfig();
+        }
+        config = YamlConfiguration.loadConfiguration(configFile);
+        if (config == null) {
+            getLogger().severe("Failed to load config.yml, using default configuration.");
+            config = getConfig(); // Fallback to default config
+            if (config == null) {
+                getLogger().severe("Critical error: Configuration is null. Disabling plugin...");
+                getServer().getPluginManager().disablePlugin(this);
+                return;
+            }
+        }
 
         if (!setupEconomy()) {
             getLogger().severe("Vault dependency not found! Disabling plugin...");
