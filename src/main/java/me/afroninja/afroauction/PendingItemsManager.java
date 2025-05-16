@@ -20,16 +20,26 @@ public class PendingItemsManager {
         pendingItems.put(playerUUID, item);
     }
 
+    public ItemStack getPendingItems(UUID playerUUID) {
+        return pendingItems.get(playerUUID);
+    }
+
+    public void removePendingItem(UUID playerUUID, ItemStack item) {
+        if (pendingItems.get(playerUUID) != null && pendingItems.get(playerUUID).isSimilar(item)) {
+            pendingItems.remove(playerUUID);
+        }
+    }
+
     public void givePendingItems(Player player) {
         UUID playerUUID = player.getUniqueId();
-        if (pendingItems.containsKey(playerUUID)) {
-            ItemStack item = pendingItems.remove(playerUUID);
+        ItemStack item = getPendingItems(playerUUID);
+        if (item != null) {
             if (player.getInventory().firstEmpty() != -1) {
                 player.getInventory().addItem(item);
                 player.sendMessage(plugin.getMessage("pending-item-received", "%item%", item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : plugin.formatItemName(item.getType().name())));
+                removePendingItem(playerUUID, item);
             } else {
                 player.sendMessage(plugin.getMessage("inventory-full", "%item%", item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : plugin.formatItemName(item.getType().name())));
-                addPendingItem(playerUUID, item); // Re-add if inventory is full
             }
         }
     }
