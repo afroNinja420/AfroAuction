@@ -52,11 +52,10 @@ public class NotificationManager {
      * @param itemName the name of the auctioned item
      */
     public void sendOutbidMessage(UUID playerUUID, String itemName) {
-        if (hasNotificationsEnabled(playerUUID)) {
-            Player player = plugin.getServer().getPlayer(playerUUID);
-            if (player != null) {
-                player.sendMessage(plugin.getMessage("outbid", "%item%", itemName));
-            }
+        if (!hasNotificationsEnabled(playerUUID)) return;
+        Player player = plugin.getServer().getPlayer(playerUUID);
+        if (player != null) {
+            player.sendMessage(plugin.getMessage("outbid", "%item%", itemName));
         }
     }
 

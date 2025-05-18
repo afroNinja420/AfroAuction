@@ -13,7 +13,6 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 
-import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -128,9 +127,9 @@ public class Auction {
      * Creates a hologram above the auction chest using multiple armor stands and a floating item.
      */
     private void createHologram() {
-        double baseHeight = plugin.getConfig().getDouble("hologram-base-height", 1.7);
+        double baseHeight = plugin.getConfig().getDouble("hologram-base-height", 1.0);
         double lineSpacing = plugin.getConfig().getDouble("hologram-line-spacing", 0.25);
-        double itemOffset = plugin.getConfig().getDouble("hologram-item-offset", 0.25);
+        double itemOffset = plugin.getConfig().getDouble("hologram-item-offset", 0.0);
 
         // Create three armor stands for each line
         Location baseLocation = chestLocation.clone().add(0.5, baseHeight, 0.5); // Center above chest
@@ -188,9 +187,8 @@ public class Auction {
         // Line 1: Item name
         hologramStands.get(0).setCustomName(org.bukkit.ChatColor.translateAlternateColorCodes('&', "&6" + itemName));
 
-        // Line 2: Bid amount with $ and commas (e.g., $1,234.56)
-        DecimalFormat decimalFormat = new DecimalFormat("$#,##0.00");
-        String formattedBid = decimalFormat.format(highestBid);
+        // Line 2: Bid amount using custom currency symbol
+        String formattedBid = plugin.formatCurrency(highestBid);
         hologramStands.get(1).setCustomName(org.bukkit.ChatColor.translateAlternateColorCodes('&', "&eBid: &f" + formattedBid));
 
         // Line 3: Time left in concise hh,mm,ss format

@@ -26,34 +26,5 @@ hologram-line-spacing: 0.25
 hologram-item-offset: 0.0
 hologram-update-interval: 20
 
-# Messages used throughout the plugin (supports & color codes)
-messages:
-  player-only: "&cThis command can only be used by players!"
-  invalid-usage: "&cUsage: /pa create <price> <duration> | /pa notifications | /pa claim"
-  cooldown: "&cYou must wait %cooldown%s before starting another auction!"
-  max-auctions: "&cYou have reached the maximum number of active auctions (%max_auctions%)!"
-  invalid-price-format: "&cPrice must be a valid number!"
-  invalid-price: "&cPrice must be between %min_price% and %max_price%!"
-  invalid-duration-format: "&cDuration format: [days]d[hours]h[minutes]m[seconds]s (e.g., 1d2h3m4s)"
-  invalid-duration: "&cDuration must be between %min_duration%s and %max_duration%s!"
-  no-item: "&cYou must hold an item to auction!"
-  not-chest: "&cYou must be looking at a chest to start an auction!"
-  chest-in-use: "&cThis chest is already in use by another auction!"
-  auction-created: "&aAuction created for %item% with a starting price of %price% for %duration%!"
-  auction-ended: "&cThis auction has ended!"
-  bid-too-low: "&cYour bid must be higher than the current bid of %current_bid%!"
-  bid-increment-too-low: "&cYour bid must be at least %min_increment% higher than the current bid!"
-  bid-percentage-too-low: "&cYour bid must be at least %min_percentage% higher than the current bid!"
-  insufficient-funds: "&cYou do not have enough money to place this bid!"
-  outbid: "&eYou have been outbid on %item%!"
-  bid-placed: "&aBid of %amount% placed on %item%!"
-  auction-no-bids: "&eYour auction for %item% ended with no bids."
-  auction-won: "&aYou won %item% for %amount%!"
-  auction-sold: "&aYour auction for %item% sold for %amount%!"
-  notifications-toggled: "&eAuction notifications have been %state%."
-  no-pending-items: "&cYou have no pending items to claim!"
-  claim-success: "&aYou have claimed %item%!"
-  inventory-full: "&cYour inventory is full! Please make space to claim your items."
-  bid-prompt: "&ePlease type your bid amount in chat (minimum %min_bid%). Type 'cancel' to cancel."
-  invalid-bid: "&cInvalid bid amount! Please enter a number or 'cancel'."
-  bid-cancelled: "&eBid cancelled."
+# Custom currency symbol to use throughout the plugin
+currency-symbol: "$"

@@ -1,0 +1,107 @@
+# AfroAuction Messages Configuration File
+# This file contains all messages used by the AfroAuction plugin.
+# Messages support Minecraft color codes using '&' (e.g., &a for green).
+# Placeholders are replaced dynamically when messages are displayed.
+
+# General Formatting Notes:
+# - %amount% and %price%: Represent currency amounts. These are automatically formatted with the custom currency symbol (from config.yml) and include commas (e.g., $1,234.56).
+# - %item%: The name of the auctioned item.
+# - %duration%: The duration of the auction (e.g., "1m, 30s").
+# - %cooldown%: Time remaining in seconds until the player can create another auction.
+# - %max_auctions%: Maximum number of active auctions allowed.
+# - %min_price% and %max_price%: Minimum and maximum allowed starting prices.
+# - %min_duration% and %max_duration%: Minimum and maximum allowed auction durations.
+# - %current_bid%: The current highest bid or starting price.
+# - %min_percentage%: The minimum bid required based on the percentage increment.
+# - %state%: The state of notifications ("enabled" or "disabled").
+
+# Command-related messages
+player-only: "&cThis command can only be used by players!"
+# Used when a non-player (e.g., console) attempts to use a command.
+
+invalid-usage: "&cInvalid usage! Use /pa help for commands."
+# Displayed when a command is used with incorrect arguments.
+
+cooldown: "&cPlease wait %cooldown% more seconds before creating another auction!"
+# Shown when a player tries to create an auction before the cooldown expires.
+# Placeholder: %cooldown%
+
+max-auctions: "&cYou have reached the maximum of %max_auctions% active auctions!"
+# Shown when a player exceeds the maximum number of active auctions.
+# Placeholder: %max_auctions%
+
+invalid-price-format: "&cInvalid price format! Use a number."
+# Displayed when the price argument cannot be parsed as a number.
+
+invalid-price: "&cPrice must be between %min_price% and %max_price%!"
+# Shown when the starting price is outside the allowed range.
+# Placeholders: %min_price%, %max_price%
+
+invalid-duration-format: "&cInvalid duration format! Use e.g., 30s, 1m, 1h, or 1d."
+# Displayed when the duration argument cannot be parsed.
+
+invalid-duration: "&cDuration must be between %min_duration% and %max_duration% seconds!"
+# Shown when the auction duration is outside the allowed range.
+# Placeholders: %min_duration%, %max_duration%
+
+no-item: "&cYou must hold an item to auction!"
+# Displayed when the player isn't holding an item in their main hand.
+
+not-chest: "&cYou must be looking at a chest!"
+# Shown when the player isn't looking at a chest while creating an auction.
+
+chest-in-use: "&cThis chest is already in use for an auction!"
+# Displayed when the targeted chest is already associated with an active auction.
+
+auction-created: "&aAuction created for %item% with starting price %price% for %duration%!"
+# Shown when a player successfully creates an auction.
+# Placeholders: %item%, %price%, %duration%
+
+notifications-toggled: "&aNotifications are now %state%!"
+# Displayed when a player toggles notifications on or off.
+# Placeholder: %state% ("enabled" or "disabled")
+
+no-pending-items: "&cYou have no pending items to claim!"
+# Shown when a player tries to claim items but has none pending.
+
+claim-success: "&aClaimed %item%!"
+# Displayed when a player successfully claims an item.
+# Placeholder: %item%
+
+inventory-full: "&cYour inventory is full!"
+# Shown when a player's inventory is full and they cannot claim an item.
+
+# Auction-related messages
+auction-ended: "&cThis auction has already ended!"
+# Displayed when a player tries to bid on an ended auction.
+
+bid-too-low: "&cYour bid must be at least %current_bid%!"
+# Shown when a bid is below the starting price (for the first bid).
+# Placeholder: %current_bid%
+
+bid-percentage-too-low: "&cYour bid must be at least %min_percentage%!"
+# Displayed when a bid doesn't meet the minimum percentage increment over the current bid.
+# Placeholder: %min_percentage%
+
+insufficient-funds: "&cYou don't have enough funds to place this bid!"
+# Shown when a player lacks the funds to place a bid.
+
+bid-placed: "&aBid placed on %item% for %amount%!"
+# Displayed when a player successfully places a bid.
+# Placeholders: %item%, %amount%
+
+auction-no-bids: "&eYour auction for %item% ended with no bids."
+# Shown to the seller when their auction ends without any bids.
+# Placeholder: %item%
+
+auction-won: "&aCongratulations! You won %item% for %amount%!"
+# Displayed to the winner when they win an auction.
+# Placeholders: %item%, %amount%
+
+auction-sold: "&aYour auction for %item% sold for %amount%!"
+# Shown to the seller when their auction successfully sells.
+# Placeholders: %item%, %amount%
+
+outbid: "&eYou have been outbid on %item%!"
+# Displayed to a player when they are outbid on an auction.
+# Placeholder: %item%
