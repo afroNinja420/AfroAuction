@@ -1,5 +1,6 @@
 package me.afroninja.afroauction;
 
+import me.afroninja.afroauction.gui.ActiveAuctionsGUI;
 import me.afroninja.afroauction.managers.AuctionManager;
 import me.afroninja.afroauction.managers.NotificationManager;
 import me.afroninja.afroauction.managers.PendingItemsManager;
@@ -159,6 +160,14 @@ public class AuctionCommand implements CommandExecutor, TabCompleter {
             return true;
         } else if (subcommand.equals("claim")) {
             return handleClaim(player);
+        } else if (subcommand.equals("activeauctions")) {
+            if (args.length != 1) {
+                player.sendMessage(plugin.getMessage("invalid-usage"));
+                return true;
+            }
+            ActiveAuctionsGUI gui = new ActiveAuctionsGUI(plugin, auctionManager.getActiveAuctions(), player);
+            gui.openInventory();
+            return true;
         }
 
         player.sendMessage(plugin.getMessage("invalid-usage"));
@@ -205,6 +214,9 @@ public class AuctionCommand implements CommandExecutor, TabCompleter {
             }
             if ("claim".startsWith(args[0].toLowerCase())) {
                 completions.add("claim");
+            }
+            if ("activeauctions".startsWith(args[0].toLowerCase())) {
+                completions.add("activeauctions");
             }
         } else if (args.length == 2) {
             String subcommand = args[0].toLowerCase();

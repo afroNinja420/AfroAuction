@@ -6,8 +6,8 @@ depend: [Vault]
 
 commands:
   pa:
-    description: Manage auctions (create, bid, notifications, claim)
-    usage: /<command> <create|bid|notifications|claim> [args]
+    description: Manage auctions (create, bid, notifications, claim, view active auctions)
+    usage: /<command> <create|notifications|claim|activeauctions> [args]
     permission: afroauction.use
     aliases: [playerauction]
 
