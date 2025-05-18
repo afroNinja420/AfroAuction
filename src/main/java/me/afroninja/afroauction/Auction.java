@@ -13,6 +13,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.util.Vector;
 
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -182,14 +183,49 @@ public class Auction {
     private void updateHologramText() {
         if (hologramStands.isEmpty()) return;
         String itemName = item.getItemMeta().hasDisplayName() ? item.getItemMeta().getDisplayName() : plugin.formatItemName(item.getType().name());
-        long timeLeft = (endTime - System.currentTimeMillis()) / 1000;
+        long timeLeftSeconds = (endTime - System.currentTimeMillis()) / 1000;
 
         // Line 1: Item name
         hologramStands.get(0).setCustomName(org.bukkit.ChatColor.translateAlternateColorCodes('&', "&6" + itemName));
-        // Line 2: Bid amount
-        hologramStands.get(1).setCustomName(org.bukkit.ChatColor.translateAlternateColorCodes('&', "&eBid: &f" + String.format("%.2f", highestBid)));
-        // Line 3: Time left
-        hologramStands.get(2).setCustomName(org.bukkit.ChatColor.translateAlternateColorCodes('&', "&eTime: &f" + timeLeft + "s"));
+
+        // Line 2: Bid amount with $ and commas (e.g., $1,234.56)
+        DecimalFormat decimalFormat = new DecimalFormat("$#,##0.00");
+        String formattedBid = decimalFormat.format(highestBid);
+        hologramStands.get(1).setCustomName(org.bukkit.ChatColor.translateAlternateColorCodes('&', "&eBid: &f" + formattedBid));
+
+        // Line 3: Time left in concise hh,mm,ss format
+        String formattedTime = formatTime(timeLeftSeconds);
+        hologramStands.get(2).setCustomName(org.bukkit.ChatColor.translateAlternateColorCodes('&', "&eTime: &f" + formattedTime));
+    }
+
+    /**
+     * Formats the time left into a concise hh,mm,ss format, showing only the smallest non-zero units.
+     * @param seconds the time left in seconds
+     * @return the formatted time string (e.g., "5m, 43s" or "43s")
+     */
+    private String formatTime(long seconds) {
+        if (seconds <= 0) return "0s";
+
+        long hours = seconds / 3600;
+        seconds %= 3600;
+        long minutes = seconds / 60;
+        seconds %= 60;
+
+        StringBuilder timeStr = new StringBuilder();
+        if (hours > 0) {
+            timeStr.append(hours).append("h");
+            if (minutes > 0) {
+                timeStr.append(", ").append(minutes).append("m");
+            }
+        } else if (minutes > 0) {
+            timeStr.append(minutes).append("m");
+            if (seconds > 0) {
+                timeStr.append(", ").append(seconds).append("s");
+            }
+        } else {
+            timeStr.append(seconds).append("s");
+        }
+        return timeStr.toString();
     }
 
     /**
