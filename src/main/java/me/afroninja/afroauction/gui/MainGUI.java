@@ -1,6 +1,7 @@
 package me.afroninja.afroauction.gui;
 
 import me.afroninja.afroauction.AfroAuction;
+import me.afroninja.afroauction.AuctionCommand; // Added import
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -71,6 +72,13 @@ public class MainGUI implements Listener {
         createAuctionMeta.setDisplayName(org.bukkit.ChatColor.translateAlternateColorCodes('&', "&eCreate Auction (Coming Soon)"));
         createAuctionButton.setItemMeta(createAuctionMeta);
         inventory.setItem(17, createAuctionButton);
+
+        // Slot 19: Claim Items button
+        ItemStack claimItemsButton = new ItemStack(Material.HOPPER);
+        ItemMeta claimItemsMeta = claimItemsButton.getItemMeta();
+        claimItemsMeta.setDisplayName(org.bukkit.ChatColor.translateAlternateColorCodes('&', "&aClaim Items"));
+        claimItemsButton.setItemMeta(claimItemsMeta);
+        inventory.setItem(19, claimItemsButton);
     }
 
     @EventHandler
@@ -93,6 +101,10 @@ public class MainGUI implements Listener {
             // Open Player Auctions GUI
             PlayerAuctionsGUI gui = new PlayerAuctionsGUI(plugin, plugin.getAuctionManager().getPlayerAuctions(clickedPlayer.getUniqueId()), clickedPlayer);
             gui.openInventory();
+        } else if (slot == 19) {
+            // Handle Claim Items
+            AuctionCommand auctionCommand = new AuctionCommand(plugin, plugin.getAuctionManager(), plugin.getNotificationManager(), plugin.getPendingItemsManager());
+            auctionCommand.handleClaim(clickedPlayer);
         }
         // Slot 17 (Create Auction) is a placeholder, so no action is taken
     }

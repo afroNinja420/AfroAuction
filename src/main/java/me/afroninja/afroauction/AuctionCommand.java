@@ -212,7 +212,7 @@ public class AuctionCommand implements CommandExecutor, TabCompleter {
      * @param player the player claiming items
      * @return true to indicate the command was processed
      */
-    private boolean handleClaim(Player player) {
+    public boolean handleClaim(Player player) {
         UUID playerUUID = player.getUniqueId();
         ItemStack item = pendingItemsManager.getPendingItems(playerUUID);
 
