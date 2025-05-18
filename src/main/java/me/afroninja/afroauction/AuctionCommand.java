@@ -168,10 +168,41 @@ public class AuctionCommand implements CommandExecutor, TabCompleter {
             ActiveAuctionsGUI gui = new ActiveAuctionsGUI(plugin, auctionManager.getActiveAuctions(), player);
             gui.openInventory();
             return true;
+        } else if (subcommand.equals("help")) {
+            if (args.length != 1) {
+                player.sendMessage(plugin.getMessage("invalid-usage"));
+                return true;
+            }
+            displayHelp(player);
+            return true;
         }
 
         player.sendMessage(plugin.getMessage("invalid-usage"));
         return true;
+    }
+
+    /**
+     * Displays the help message with all available commands and their usage.
+     * @param player the player to send the help message to
+     */
+    private void displayHelp(Player player) {
+        player.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&', "&e&m----------&e[ &aAfroAuction Help &e]&m----------"));
+        player.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&', "&a/pa create <price> <duration>"));
+        player.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&', "&f  Start an auction for the item in your hand."));
+        player.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&', "&f  Example: /pa create 100 30s"));
+        player.sendMessage("");
+        player.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&', "&a/pa notifications"));
+        player.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&', "&f  Toggle auction notifications on or off."));
+        player.sendMessage("");
+        player.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&', "&a/pa claim"));
+        player.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&', "&f  Claim pending items from ended auctions."));
+        player.sendMessage("");
+        player.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&', "&a/pa activeauctions"));
+        player.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&', "&f  View all currently active auctions in a GUI."));
+        player.sendMessage("");
+        player.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&', "&a/pa help"));
+        player.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&', "&f  Show this help message with all commands."));
+        player.sendMessage(org.bukkit.ChatColor.translateAlternateColorCodes('&', "&e&m-------------------------------------"));
     }
 
     /**
@@ -217,6 +248,9 @@ public class AuctionCommand implements CommandExecutor, TabCompleter {
             }
             if ("activeauctions".startsWith(args[0].toLowerCase())) {
                 completions.add("activeauctions");
+            }
+            if ("help".startsWith(args[0].toLowerCase())) {
+                completions.add("help");
             }
         } else if (args.length == 2) {
             String subcommand = args[0].toLowerCase();
