@@ -1,5 +1,6 @@
 package me.afroninja.afroauction;
 
+import me.afroninja.afroauction.gui.MainGUI;
 import me.afroninja.afroauction.gui.ActiveAuctionsGUI;
 import me.afroninja.afroauction.managers.AuctionManager;
 import me.afroninja.afroauction.managers.NotificationManager;
@@ -58,7 +59,8 @@ public class AuctionCommand implements CommandExecutor, TabCompleter {
 
         // Handle /pa command with subcommands
         if (args.length == 0) {
-            player.sendMessage(plugin.getMessage("invalid-usage"));
+            MainGUI gui = new MainGUI(plugin, player);
+            gui.openInventory();
             return true;
         }
 
