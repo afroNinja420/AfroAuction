@@ -286,6 +286,14 @@ public class Auction {
     }
 
     /**
+     * Sets the highest bid amount.
+     * @param highestBid the new highest bid
+     */
+    public void setHighestBid(double highestBid) {
+        this.highestBid = highestBid;
+    }
+
+    /**
      * Retrieves the number of bids placed.
      * @return the number of bids
      */
@@ -294,11 +302,27 @@ public class Auction {
     }
 
     /**
+     * Sets the number of bids placed.
+     * @param bidCount the new bid count
+     */
+    public void setBidCount(int bidCount) {
+        this.bidCount = bidCount;
+    }
+
+    /**
      * Retrieves the UUID of the highest bidder.
      * @return the highest bidder's UUID, or null if no bids
      */
     public UUID getHighestBidder() {
         return highestBidder;
+    }
+
+    /**
+     * Sets the UUID of the highest bidder.
+     * @param highestBidder the new highest bidder's UUID
+     */
+    public void setHighestBidder(UUID highestBidder) {
+        this.highestBidder = highestBidder;
     }
 
     /**

@@ -3,7 +3,12 @@ package me.afroninja.afroauction.managers;
 import me.afroninja.afroauction.AfroAuction;
 import me.afroninja.afroauction.Auction;
 import org.bukkit.Location;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.inventory.ItemStack;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -15,6 +20,8 @@ import java.util.stream.Collectors;
 public class AuctionManager {
     private final AfroAuction plugin;
     private final Map<Location, Auction> activeAuctions;
+    private File auctionFile;
+    private FileConfiguration auctionConfig;
 
     /**
      * Constructs a new AuctionManager instance.
@@ -23,6 +30,8 @@ public class AuctionManager {
     public AuctionManager(AfroAuction plugin) {
         this.plugin = plugin;
         this.activeAuctions = new HashMap<>();
+        this.auctionFile = new File(plugin.getDataFolder(), "auctions.yml");
+        this.auctionConfig = YamlConfiguration.loadConfiguration(auctionFile);
     }
 
     /**
@@ -90,20 +99,76 @@ public class AuctionManager {
     }
 
     /**
-     * Loads auctions from storage (e.g., a file or database).
+     * Loads auctions from auctions.yml.
      */
     public void loadAuctions() {
-        // Placeholder: Implement loading logic once AfroAuction.java is shared
-        plugin.getLogger().info("Loading auctions...");
-        // This method will be expanded based on AfroAuction.java's implementation
+        if (!auctionFile.exists()) {
+            try {
+                auctionFile.createNewFile();
+            } catch (IOException e) {
+                plugin.getLogger().severe("Could not create auctions.yml: " + e.getMessage());
+            }
+            plugin.getLogger().info("No auctions.yml found, starting fresh.");
+            return;
+        }
+
+        auctionConfig = YamlConfiguration.loadConfiguration(auctionFile);
+        activeAuctions.clear();
+        for (String key : auctionConfig.getKeys(false)) {
+            try {
+                UUID sellerUUID = UUID.fromString(auctionConfig.getString(key + ".sellerUUID"));
+                ItemStack item = auctionConfig.getItemStack(key + ".item");
+                Location chestLocation = (Location) auctionConfig.get(key + ".chestLocation");
+                double startPrice = auctionConfig.getDouble(key + ".startPrice");
+                long endTime = auctionConfig.getLong(key + ".endTime");
+                double highestBid = auctionConfig.getDouble(key + ".highestBid");
+                UUID highestBidder = auctionConfig.getString(key + ".highestBidder") != null ? UUID.fromString(auctionConfig.getString(key + ".highestBidder")) : null;
+                int bidCount = auctionConfig.getInt(key + ".bidCount");
+
+                // Skip expired auctions
+                if (endTime < System.currentTimeMillis()) {
+                    plugin.getLogger().info("Skipping expired auction: " + key);
+                    continue;
+                }
+
+                Auction auction = new Auction(plugin, sellerUUID, item, chestLocation, startPrice, (endTime - System.currentTimeMillis()) / 1000);
+                auction.setHighestBid(highestBid);
+                auction.setHighestBidder(highestBidder);
+                auction.setBidCount(bidCount);
+                activeAuctions.put(chestLocation, auction);
+                plugin.getLogger().info("Loaded auction: " + key);
+            } catch (Exception e) {
+                plugin.getLogger().severe("Failed to load auction " + key + ": " + e.getMessage());
+            }
+        }
     }
 
     /**
-     * Saves auctions to storage (e.g., a file or database).
+     * Saves active auctions to auctions.yml.
      */
     public void saveAuctions() {
-        // Placeholder: Implement saving logic once AfroAuction.java is shared
-        plugin.getLogger().info("Saving auctions...");
-        // This method will be expanded based on AfroAuction.java's implementation
+        auctionConfig.set("auctions", null); // Clear existing data
+
+        int index = 0;
+        for (Map.Entry<Location, Auction> entry : activeAuctions.entrySet()) {
+            Auction auction = entry.getValue();
+            String path = "auctions." + index;
+            auctionConfig.set(path + ".sellerUUID", auction.getSellerUUID().toString());
+            auctionConfig.set(path + ".item", auction.getItem());
+            auctionConfig.set(path + ".chestLocation", auction.getChestLocation());
+            auctionConfig.set(path + ".startPrice", auction.getStartPrice());
+            auctionConfig.set(path + ".endTime", auction.getEndTime());
+            auctionConfig.set(path + ".highestBid", auction.getHighestBid());
+            auctionConfig.set(path + ".highestBidder", auction.getHighestBidder() != null ? auction.getHighestBidder().toString() : null);
+            auctionConfig.set(path + ".bidCount", auction.getBidCount());
+            index++;
+        }
+
+        try {
+            auctionConfig.save(auctionFile);
+            plugin.getLogger().info("Saved " + activeAuctions.size() + " auctions to auctions.yml");
+        } catch (IOException e) {
+            plugin.getLogger().severe("Failed to save auctions: " + e.getMessage());
+        }
     }
 }
