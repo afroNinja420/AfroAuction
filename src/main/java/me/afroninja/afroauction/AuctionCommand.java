@@ -55,11 +55,6 @@ public class AuctionCommand implements CommandExecutor, TabCompleter {
 
         Player player = (Player) sender;
 
-        // Handle /claim command directly
-        if (label.equalsIgnoreCase("claim")) {
-            return handleClaim(player);
-        }
-
         // Handle /pa command with subcommands
         if (args.length == 0) {
             player.sendMessage(plugin.getMessage("invalid-usage"));

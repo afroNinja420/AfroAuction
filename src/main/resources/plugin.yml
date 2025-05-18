@@ -9,10 +9,7 @@ commands:
     description: Manage auctions (create, bid, notifications, claim)
     usage: /<command> <create|bid|notifications|claim> [args]
     permission: afroauction.use
-  claim:
-    description: Claim pending auction items
-    usage: /<command>
-    permission: afroauction.use
+    aliases: [playerauction]
 
 permissions:
   afroauction.use:

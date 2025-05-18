@@ -70,7 +70,6 @@ public class AfroAuction extends JavaPlugin {
         AuctionCommand auctionCommand = new AuctionCommand(this, auctionManager, notificationManager, pendingItemsManager);
         getCommand("pa").setExecutor(auctionCommand);
         getCommand("pa").setTabCompleter(auctionCommand);
-        getCommand("claim").setExecutor(auctionCommand);
 
         getLogger().info("AfroAuction enabled!");
     }
