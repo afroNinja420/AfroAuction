@@ -1,13 +1,14 @@
 # AfroAuction
 
-AfroAuction is a Minecraft plugin that allows players to create and participate in auctions using in-game chests. Players can auction items, bid on auctions via a GUI, and manage their pending items. The plugin features holograms above auction chests, a bidding system with percentage-based increments, and notifications for outbids and auction results.
+AfroAuction is a Minecraft plugin that allows players to create and participate in auctions using in-game chests. Players can auction items, bid on auctions via a GUI, manage their pending items, and view all active auctions. The plugin features holograms above auction chests, a bidding system with percentage-based increments, and notifications for outbids and auction results.
 
 ## Features
 
 - **Chest-Based Auctions**: Start auctions by interacting with a chest while holding an item.
 - **Holograms**: Displays auction details (item name, highest bid, time left) above the chest using armor stands and a floating item.
 - **Bidding System**: Players can bid via a GUI, with a minimum bid increment (default 10%). Invalid bids prompt for a retry without reopening the GUI.
-- **Auction GUI**: View auction details (starting bid, highest bid, bidder, time left) and place bids.
+- **Auction GUI**: View auction details (starting bid, highest bid, bidder, time left) and place bids. Auction creators see a "Settings" button to configure auction options.
+- **Active Auctions GUI**: View all active auctions in a dedicated GUI, showing each auction’s item with details (start price, highest bid, creator, time left).
 - **Notifications**: Receive messages for outbids, auction wins, and auction completions.
 - **Pending Items**: Items from ended auctions (won or unsold) are stored for later claiming with `/pa claim`.
 - **Configurable Settings**: Customize auction rules, hologram display, and messages via `config.yml`.
@@ -28,6 +29,10 @@ All commands start with `/pa` or `/playerauction`. The following are available:
 - `/pa claim`  
   Claims all pending items (won auctions or unsold items) if your inventory has space.  
   Aliased as `/playerauction claim`.
+
+- `/pa activeauctions`  
+  Opens a GUI displaying all currently active auctions, showing each auction’s item and details.  
+  Example: `/pa activeauctions`
 
 ## Configuration
 
@@ -78,6 +83,10 @@ The `config.yml` file allows customization of the plugin’s behavior. Below are
 
 3. **Claim Items**:
    - After an auction ends, use `/pa claim` to retrieve won or unsold items.
+
+4. **View Active Auctions**:
+   - Run `/pa activeauctions` to open a GUI listing all active auctions.
+   - Each auction is represented by its item, with details in the lore.
 
 ## Dependencies
 
