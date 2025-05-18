@@ -1,5 +1,7 @@
-package me.afroninja.afroauction;
+package me.afroninja.afroauction.gui;
 
+import me.afroninja.afroauction.AfroAuction;
+import me.afroninja.afroauction.Auction;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -20,16 +22,19 @@ public class AuctionGUI implements Listener {
     private final AfroAuction plugin;
     private final Auction auction;
     private final Inventory inventory;
+    private final Player viewer;
     private int updateTaskId;
 
     /**
      * Constructs a new AuctionGUI instance.
      * @param plugin the AfroAuction plugin instance
      * @param auction the Auction instance
+     * @param viewer the player opening the GUI
      */
-    public AuctionGUI(AfroAuction plugin, Auction auction) {
+    public AuctionGUI(AfroAuction plugin, Auction auction, Player viewer) {
         this.plugin = plugin;
         this.auction = auction;
+        this.viewer = viewer;
         this.inventory = Bukkit.createInventory(null, 27, "Auction");
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
         updateInventory();
@@ -37,11 +42,10 @@ public class AuctionGUI implements Listener {
     }
 
     /**
-     * Opens the auction GUI for a player.
-     * @param player the player to open the GUI for
+     * Opens the auction GUI for the player.
      */
-    public void openInventory(Player player) {
-        player.openInventory(inventory);
+    public void openInventory() {
+        viewer.openInventory(inventory);
     }
 
     /**
@@ -77,6 +81,15 @@ public class AuctionGUI implements Listener {
         bidMeta.setDisplayName(org.bukkit.ChatColor.translateAlternateColorCodes('&', "&aPlace Bid"));
         bidButton.setItemMeta(bidMeta);
         inventory.setItem(15, bidButton);
+
+        // Slot 22: Settings button (only for auction creator)
+        if (viewer.getUniqueId().equals(auction.getSellerUUID())) {
+            ItemStack settingsButton = new ItemStack(Material.ANVIL);
+            ItemMeta settingsMeta = settingsButton.getItemMeta();
+            settingsMeta.setDisplayName(org.bukkit.ChatColor.translateAlternateColorCodes('&', "&eSettings"));
+            settingsButton.setItemMeta(settingsMeta);
+            inventory.setItem(22, settingsButton);
+        }
     }
 
     /**
@@ -105,6 +118,10 @@ public class AuctionGUI implements Listener {
             player.sendMessage(plugin.getMessage("bid-prompt", "%min_bid%", String.format("%.2f", minBid)));
             plugin.addPlayerAwaitingBid(player.getUniqueId(), auction);
             player.closeInventory();
+        } else if (event.getRawSlot() == 22 && viewer.getUniqueId().equals(auction.getSellerUUID())) {
+            // Open the settings GUI for the auction creator
+            AuctionSettingsGUI settingsGUI = new AuctionSettingsGUI(plugin, auction, viewer, this);
+            settingsGUI.openInventory();
         }
     }
 
