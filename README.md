@@ -34,6 +34,10 @@ All commands start with `/pa` or `/playerauction`. The following are available:
   Opens a GUI displaying all currently active auctions, showing each auction’s item and details.  
   Example: `/pa activeauctions`
 
+- `/pa help`  
+  Displays a list of all available commands with their syntax and descriptions in chat.  
+  Example: `/pa help`
+
 ## Configuration
 
 The `config.yml` file allows customization of the plugin’s behavior. Below are the key settings:
