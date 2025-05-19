@@ -167,7 +167,7 @@ public class AuctionCommand implements CommandExecutor, TabCompleter {
                 player.sendMessage(plugin.getMessage("invalid-usage"));
                 return true;
             }
-            ActiveAuctionsGUI gui = new ActiveAuctionsGUI(plugin, auctionManager.getActiveAuctions(), player);
+            ActiveAuctionsGUI gui = new ActiveAuctionsGUI(plugin, auctionManager.getActiveAuctions(), player); // Use List<Auction>
             gui.openInventory();
             return true;
         } else if (subcommand.equals("help")) {

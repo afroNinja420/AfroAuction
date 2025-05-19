@@ -11,7 +11,7 @@ import org.bukkit.event.player.AsyncPlayerChatEvent;
 import java.util.UUID;
 
 /**
- * Listens for chat messages to handle bid inputs after clicking the bid button in the GUI.
+ * Listens for chat messages to process bids placed by players.
  */
 public class ChatBidListener implements Listener {
     private final AfroAuction plugin;
@@ -33,39 +33,21 @@ public class ChatBidListener implements Listener {
         UUID playerUUID = player.getUniqueId();
 
         Auction auction = plugin.getAuctionForPlayer(playerUUID);
-        if (auction != null) {
-            event.setCancelled(true);
+        if (auction == null) return;
 
-            String message = event.getMessage().trim();
-            if (message.equalsIgnoreCase("cancel")) {
+        event.setCancelled(true);
+
+        try {
+            double bidAmount = Double.parseDouble(event.getMessage());
+            if (auction.placeBid(player, bidAmount)) {
                 plugin.removePlayerFromAwaitingBid(playerUUID);
-                player.sendMessage(plugin.getMessage("bid-cancelled"));
-                return;
-            }
-
-            double bidAmount;
-            try {
-                bidAmount = Double.parseDouble(message);
-            } catch (NumberFormatException e) {
-                player.sendMessage(plugin.getMessage("invalid-bid"));
-                // Prompt to try again
-                double minBid = auction.getHighestBidder() == null
-                        ? auction.getStartPrice()
-                        : auction.getHighestBid() * (1 + plugin.getConfig().getDouble("min-bid-percentage-increment", 10.0) / 100.0);
-                player.sendMessage(plugin.getMessage("bid-prompt", "%min_bid%", String.format("%.2f", minBid)));
-                return;
-            }
-
-            boolean bidSuccessful = auction.placeBid(player, bidAmount);
-            if (bidSuccessful) {
-                plugin.removePlayerFromAwaitingBid(playerUUID);
+                player.sendMessage(plugin.getMessage("bid-placed", "%amount%", String.valueOf(bidAmount), "%item%", auction.getItem().getType().name()));
             } else {
-                // Bid failed (e.g., too low or insufficient funds), prompt to try again
-                double minBid = auction.getHighestBidder() == null
-                        ? auction.getStartPrice()
-                        : auction.getHighestBid() * (1 + plugin.getConfig().getDouble("min-bid-percentage-increment", 10.0) / 100.0);
-                player.sendMessage(plugin.getMessage("bid-prompt", "%min_bid%", String.format("%.2f", minBid)));
+                player.sendMessage(plugin.getMessage("bid-too-low", "%current_bid%", String.valueOf(auction.getHighestBid())));
             }
+        } catch (NumberFormatException e) {
+            player.sendMessage(plugin.getMessage("invalid-price-format"));
+            plugin.removePlayerFromAwaitingBid(playerUUID);
         }
     }
 }

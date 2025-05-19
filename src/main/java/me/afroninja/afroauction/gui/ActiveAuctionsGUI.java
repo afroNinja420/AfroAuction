@@ -3,100 +3,93 @@ package me.afroninja.afroauction.gui;
 import me.afroninja.afroauction.AfroAuction;
 import me.afroninja.afroauction.Auction;
 import org.bukkit.Bukkit;
-import org.bukkit.Location;
+import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.List;
-import java.util.Map;
 
 /**
- * Manages the GUI for viewing all active auctions.
+ * Represents the Active Auctions GUI, displaying all current auctions for bidding.
  */
-public class ActiveAuctionsGUI implements Listener {
+public class ActiveAuctionsGUI {
     private final AfroAuction plugin;
-    private final Map<Location, Auction> activeAuctions;
-    private final Player viewer;
-    private final Inventory inventory;
-    private int updateTaskId;
+    private final Player player;
+    private Inventory inventory;
 
     /**
      * Constructs a new ActiveAuctionsGUI instance.
      * @param plugin the AfroAuction plugin instance
-     * @param activeAuctions the map of active auctions from AuctionManager
-     * @param viewer the player opening the GUI
+     * @param auctions the list of active auctions
+     * @param player the player opening the GUI
      */
-    public ActiveAuctionsGUI(AfroAuction plugin, Map<Location, Auction> activeAuctions, Player viewer) {
+    public ActiveAuctionsGUI(AfroAuction plugin, List<Auction> auctions, Player player) {
         this.plugin = plugin;
-        this.activeAuctions = activeAuctions;
-        this.viewer = viewer;
-        this.inventory = Bukkit.createInventory(null, 54, "Active Auctions"); // 54 slots for more auctions
-        plugin.getServer().getPluginManager().registerEvents(this, plugin);
-        updateInventory();
-        scheduleUpdate();
+        this.player = player;
+        initializeInventory(auctions);
     }
 
     /**
-     * Opens the active auctions GUI for the player.
+     * Initializes the inventory with active auctions.
+     * @param auctions the list of active auctions
      */
-    public void openInventory() {
-        viewer.openInventory(inventory);
-    }
+    private void initializeInventory(List<Auction> auctions) {
+        int size = Math.min(54, (auctions.size() / 9 + 1) * 9); // Ensure at least one row, max 6 rows
+        inventory = Bukkit.createInventory(null, size, ChatColor.translateAlternateColorCodes('&', "&eActive Auctions"));
 
-    /**
-     * Updates the inventory with all active auctions.
-     */
-    private void updateInventory() {
-        inventory.clear();
         int slot = 0;
-
-        for (Auction auction : activeAuctions.values()) {
-            if (slot >= 54) break; // Limit to 54 slots
+        for (Auction auction : auctions) {
+            if (slot >= size) break; // Prevent overflow
 
             ItemStack item = auction.getItem().clone();
             ItemMeta meta = item.getItemMeta();
             if (meta != null) {
-                String creatorName = plugin.getServer().getOfflinePlayer(auction.getSellerUUID()).getName();
-                long timeLeft = (auction.getEndTime() - System.currentTimeMillis()) / 1000;
-                meta.setLore(List.of(
-                        org.bukkit.ChatColor.translateAlternateColorCodes('&', "&eStarting Bid: &f" + String.format("%.2f", auction.getStartPrice())),
-                        org.bukkit.ChatColor.translateAlternateColorCodes('&', "&eHighest Bid: &f" + String.format("%.2f", auction.getHighestBid())),
-                        org.bukkit.ChatColor.translateAlternateColorCodes('&', "&eCreator: &f" + (creatorName != null ? creatorName : "Unknown")),
-                        org.bukkit.ChatColor.translateAlternateColorCodes('&', "&eTime Left: &f" + timeLeft + "s")
+                meta.setDisplayName(ChatColor.translateAlternateColorCodes('&', "&6" + plugin.formatItemName(item.getType().name())));
+                meta.setLore(java.util.Arrays.asList(
+                        ChatColor.translateAlternateColorCodes('&', "&eBid: &f" + plugin.formatCurrency(auction.getHighestBid())),
+                        ChatColor.translateAlternateColorCodes('&', "&eTime Left: &f" + formatTime(auction.getEndTime() - System.currentTimeMillis()))
                 ));
                 item.setItemMeta(meta);
             }
-            inventory.setItem(slot++, item);
+            inventory.setItem(slot, item);
+
+            slot++;
         }
     }
 
     /**
-     * Schedules a repeating task to update the GUI every second.
+     * Opens the inventory for the player.
      */
-    private void scheduleUpdate() {
-        updateTaskId = plugin.getServer().getScheduler().scheduleSyncRepeatingTask(plugin, () -> {
-            updateInventory();
-        }, 0L, 20L); // Update every 20 ticks (1 second)
+    public void openInventory() {
+        player.openInventory(inventory);
     }
 
-    @EventHandler
-    public void onInventoryClick(InventoryClickEvent event) {
-        if (event.getInventory() != inventory) return;
-        event.setCancelled(true);
-        // No actions on click for now; just viewing
-    }
+    /**
+     * Formats the time left into a concise hh,mm,ss format, showing only the smallest non-zero units.
+     * @param milliseconds the time left in milliseconds
+     * @return the formatted time string (e.g., "5m, 43s" or "43s")
+     */
+    private String formatTime(long milliseconds) {
+        long seconds = milliseconds / 1000;
+        if (seconds <= 0) return "0s";
 
-    @EventHandler
-    public void onInventoryClose(InventoryCloseEvent event) {
-        if (event.getInventory() != inventory) return;
-        if (inventory.getViewers().isEmpty()) {
-            plugin.getServer().getScheduler().cancelTask(updateTaskId);
+        long hours = seconds / 3600;
+        seconds %= 3600;
+        long minutes = seconds / 60;
+        seconds %= 60;
+
+        StringBuilder timeStr = new StringBuilder();
+        if (hours > 0) {
+            timeStr.append(hours).append("h");
+            if (minutes > 0) timeStr.append(", ").append(minutes).append("m");
+        } else if (minutes > 0) {
+            timeStr.append(minutes).append("m");
+            if (seconds > 0) timeStr.append(", ").append(seconds).append("s");
+        } else {
+            timeStr.append(seconds).append("s");
         }
+        return timeStr.toString();
     }
 }

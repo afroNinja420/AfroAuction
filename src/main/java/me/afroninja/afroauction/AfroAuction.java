@@ -1,10 +1,11 @@
 package me.afroninja.afroauction;
 
 import me.afroninja.afroauction.gui.MainGUI;
+import me.afroninja.afroauction.listeners.AuctionListener;
+import me.afroninja.afroauction.listeners.ChatBidListener;
 import me.afroninja.afroauction.managers.AuctionManager;
 import me.afroninja.afroauction.managers.NotificationManager;
 import me.afroninja.afroauction.managers.PendingItemsManager;
-import me.afroninja.afroauction.listeners.AuctionListener;
 import net.milkbowl.vault.economy.Economy;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.RegisteredServiceProvider;
@@ -13,6 +14,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * Main class for the AfroAuction plugin, handling initialization and core functionality.
@@ -24,6 +26,7 @@ public class AfroAuction extends JavaPlugin {
     private Economy economy;
     private FileConfiguration messages;
     private String currencySymbol;
+    private Map<UUID, Auction> playersAwaitingBid; // Maps players to auctions they are bidding on via chat
 
     @Override
     public void onEnable() {
@@ -44,6 +47,7 @@ public class AfroAuction extends JavaPlugin {
         auctionManager = new AuctionManager(this);
         notificationManager = new NotificationManager(this);
         pendingItemsManager = new PendingItemsManager(this);
+        playersAwaitingBid = new HashMap<>();
 
         // Setup economy
         if (!setupEconomy()) {
@@ -59,6 +63,7 @@ public class AfroAuction extends JavaPlugin {
 
         // Register listeners
         getServer().getPluginManager().registerEvents(new AuctionListener(this, auctionManager, notificationManager), this);
+        getServer().getPluginManager().registerEvents(new ChatBidListener(this, auctionManager), this); // Pass AuctionManager
 
         // Load auctions
         auctionManager.loadAuctions();
@@ -148,6 +153,32 @@ public class AfroAuction extends JavaPlugin {
             }
         }
         return formatted.toString().trim();
+    }
+
+    /**
+     * Adds a player to the list of those awaiting a bid via chat.
+     * @param playerUUID the UUID of the player
+     * @param auction the auction they are bidding on
+     */
+    public void addPlayerAwaitingBid(UUID playerUUID, Auction auction) {
+        playersAwaitingBid.put(playerUUID, auction);
+    }
+
+    /**
+     * Retrieves the auction a player is currently bidding on via chat.
+     * @param playerUUID the UUID of the player
+     * @return the Auction the player is bidding on, or null if not awaiting a bid
+     */
+    public Auction getAuctionForPlayer(UUID playerUUID) {
+        return playersAwaitingBid.get(playerUUID);
+    }
+
+    /**
+     * Removes a player from the list of those awaiting a bid via chat.
+     * @param playerUUID the UUID of the player
+     */
+    public void removePlayerFromAwaitingBid(UUID playerUUID) {
+        playersAwaitingBid.remove(playerUUID);
     }
 
     /**
